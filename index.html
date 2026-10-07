@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7f3e8" />
+  <meta name="description" content="Sade, hızlı ve mobil uyumlu Kur'an okuma uygulaması." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Kur'an</title>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Dini Asistan</p>
+      <h1>Kur'an</h1>
+    </div>
+    <button id="homeButton" class="ghost-button" type="button">Sureler</button>
+  </header>
+
+  <main class="app-shell">
+    <section id="libraryView" class="view">
+      <div class="hero">
+        <p class="arabic-mark" lang="ar" dir="rtl">ٱقْرَأْ</p>
+        <h2>Kur'an-ı Kerim</h2>
+        <p>Sureyi seç, ayetleri Arapça metni ve Türkçe mealiyle oku.</p>
+      </div>
+
+      <label class="search-box" for="searchInput">
+        <span>Ara</span>
+        <input id="searchInput" type="search" placeholder="Sure adı veya numarası" autocomplete="off" />
+      </label>
+
+      <div id="status" class="status" role="status">Sureler yükleniyor…</div>
+      <div id="surahList" class="surah-list" aria-live="polite"></div>
+    </section>
+
+    <section id="readerView" class="view" hidden>
+      <div class="reader-head">
+        <button id="backButton" class="ghost-button" type="button">← Sureler</button>
+        <div>
+          <p id="surahMeta" class="eyebrow"></p>
+          <h2 id="surahTitle">Sure</h2>
+          <p id="surahArabicTitle" class="surah-arabic-title" lang="ar" dir="rtl"></p>
+        </div>
+      </div>
+
+      <div id="readerStatus" class="status" role="status"></div>
+      <div id="ayahList" class="ayah-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Kur'an metni çevrimiçi Kur'an API'sinden yüklenir.</span>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
