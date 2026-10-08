@@ -1,0 +1,128 @@
+name: Dini Asistan - Stable Signed Versioned Debug APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Semantic version, e.g. 1.0.0 or 1.0.1'
+        required: true
+        type: string
+        default: '1.0.0'
+      version_code:
+        description: 'Monotonically increasing Android code: 10000, 10001, 20000...'
+        required: true
+        type: string
+        default: '10000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dini-stable-versioned-apk
+  cancel-in-progress: false
+
+jobs:
+  versioned-stable-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      STORE_B64: ${{ secrets.DINI_SIGNING_KEYSTORE_B64 }}
+      DINI_SIGNING_STORE_PASSWORD: ${{ secrets.DINI_SIGNING_STORE_PASSWORD }}
+      DINI_SIGNING_KEY_ALIAS: ${{ secrets.DINI_SIGNING_KEY_ALIAS }}
+      DINI_SIGNING_KEY_PASSWORD: ${{ secrets.DINI_SIGNING_KEY_PASSWORD }}
+      VERSION_NAME: ${{ inputs.version_name }}
+      VERSION_CODE: ${{ inputs.version_code }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version and load private permanent signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Invalid semantic version"; exit 1; }
+          [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "::error::Invalid versionCode"; exit 1; }
+          for item in STORE_B64 DINI_SIGNING_STORE_PASSWORD DINI_SIGNING_KEY_ALIAS DINI_SIGNING_KEY_PASSWORD; do
+            if [[ -z "${!item}" ]]; then
+              echo "::error::Missing repository secret $item; configure the four signing secrets before running."
+              exit 1
+            fi
+          done
+          echo "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/dini-stable-signing.jks"
+          chmod 600 "$RUNNER_TEMP/dini-stable-signing.jks"
+          test -s "$RUNNER_TEMP/dini-stable-signing.jks"
+          echo "DINI_SIGNING_STORE_FILE=$RUNNER_TEMP/dini-stable-signing.jks" >> "$GITHUB_ENV"
+          echo "Permanent signing material loaded from GitHub Actions Secrets. Not committed."
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Install Android SDK, Quran asset build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --no-cache-dir Pillow PyMuPDF requests mutagen
+      - name: Verify authentic Mushaf and all 6236 ayah audio sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/test_mushaf_alignment.py
+          python -u scripts/build_ayah_pages.py
+          python scripts/validate_ayah_page_assets.py
+      - name: Build Android Debug APK with unchanged package and stable signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's/applicationId = "com.dini.asistan"/applicationId = "com.dini.asistan.premium"/' app/build.gradle.kts
+          gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug \
+            "-PdiniVersionCode=$VERSION_CODE" "-PdiniVersionName=$VERSION_NAME"
+      - name: Verify immutable package name, same-key signature and offline assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          DEST="output/DiniAsistan-Premium-v${VERSION_NAME}-Debug.apk"
+          cp "$APK" "$DEST"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$DEST" | tee output/certificate.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEST" | head -n 3
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEST" | grep "package: name='com.dini.asistan.premium' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$DEST" | tee output/permissions.txt
+          if grep -F 'android.permission.INTERNET' output/permissions.txt; then exit 1; fi
+          unzip -tq "$DEST" | tail -1
+          test "$(unzip -Z1 "$DEST" | grep -Ec '^assets/mushaf/[0-9]{3}\.webp$')" -eq 604
+          test "$(unzip -Z1 "$DEST" | grep -Ec '^assets/audio/pages/[0-9]{3}\.opus$')" -eq 604
+          unzip -p "$DEST" assets/quran/ayah-page-index.json > output/ayah-page-index.json
+          python scripts/validate_ayah_page_assets.py --index-only output/ayah-page-index.json
+          (cd output && sha256sum "$(basename "$DEST")" > SHA256SUMS.txt)
+      - name: Publish direct APK to versioned GitHub Release (not a ZIP)
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION_NAME}-stable-debug"
+          test -n "$TAG"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Version $TAG already published; increment version and code instead of silently replacing it."
+            exit 1
+          fi
+          gh release create "$TAG" output/*.apk output/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Dini Asistan Premium v$VERSION_NAME Stable-Signed Debug APK" \
+            --notes "Android debug applicationId com.dini.asistan.premium. Signed with the same private key stored in GitHub Actions Secrets. Install-over-previous stable-signed version is supported when versionCode increases and the signing key is unchanged. 604 Mushaf pages, 6236 verse cues; offline." \
+            --prerelease --latest=false
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,assets | jq '{url,assets:[.assets[]|{name,size,downloadUrl:.url}]}'
+      - name: Save APK in GitHub Actions as additional backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: dini-asistan-stable-v${{ inputs.version_name }}-apk
+          path: output/*.apk
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
