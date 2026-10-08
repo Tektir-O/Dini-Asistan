@@ -96,7 +96,7 @@ class AyahPagePlayer(
                 if(request!=generation)return@setOnPreparedListener
                 prepared=true
                 if(part.fromMs>0) {
-                    m.seekTo(part.fromMs,MediaPlayer.SEEK_CLOSEST)
+                    m.seekTo(part.fromMs.toLong(),MediaPlayer.SEEK_CLOSEST)
                 } else {
                     startPrepared(m,request)
                 }
@@ -163,7 +163,7 @@ class AyahPagePlayer(
         val bounded=ms.coerceIn(part.fromMs,(part.toMs-1).coerceAtLeast(part.fromMs))
         try{
             // Seeking an existing stream must not restart playback.
-            m.seekTo(bounded,MediaPlayer.SEEK_CLOSEST)
+            m.seekTo(bounded.toLong(),MediaPlayer.SEEK_CLOSEST)
             positionMs=bounded
             val cue=cues.getOrNull(AyahCuePlan.currentIndex(cues,bounded))
             progress(bounded,part.toMs,cue?.label?:"",isPlaying)
