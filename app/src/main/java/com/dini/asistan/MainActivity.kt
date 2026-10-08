@@ -37,6 +37,8 @@ class MainActivity : Activity() {
     private lateinit var catalog: OfflineCatalog
     private lateinit var audio: PageAudioController
     private lateinit var surahAudio: SurahAudioController
+    private lateinit var ayahPlayer: AyahPagePlayer
+    private var premium: PremiumMushafScreen? = null
     private var screen = Screen.HOME
     private var currentPage = 1
     private var currentSurah = 1
@@ -78,6 +80,19 @@ class MainActivity : Activity() {
                 runOnUiThread { statusText?.text = msg; Toast.makeText(this, msg, Toast.LENGTH_LONG).show() }
             }
         )
+        ayahPlayer = AyahPagePlayer(
+            this, catalog,
+            state = { message -> runOnUiThread { premium?.setStatus(message) } },
+            progress = { position, duration, verse, playing ->
+                runOnUiThread { premium?.setProgress(position,duration,verse,playing) }
+            },
+            error = { message ->
+                runOnUiThread {
+                    premium?.setStatus(message)
+                    Toast.makeText(this,message,Toast.LENGTH_LONG).show()
+                }
+            }
+        )
         render()
     }
 
@@ -91,6 +106,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         audio.release()
         surahAudio.release()
+        ayahPlayer.release()
         super.onDestroy()
     }
 
@@ -146,7 +162,10 @@ class MainActivity : Activity() {
         }
 
     private fun navigate(target: Screen) {
-        if (screen == Screen.QURAN && target != Screen.QURAN) audio.stop()
+        if (screen == Screen.QURAN && target != Screen.QURAN) {
+            audio.stop()
+            ayahPlayer.stop()
+        }
         if (screen == Screen.SURAH && target != Screen.SURAH) surahAudio.stop()
         screen = target
         render()
@@ -154,10 +173,15 @@ class MainActivity : Activity() {
 
     private fun render() {
         statusText = null
+        premium = null
         val root = column().apply { setBackgroundColor(this@MainActivity.background) }
         when (screen) {
             Screen.HOME -> root.addView(home(), LinearLayout.LayoutParams(-1, 0, 1f))
-            Screen.QURAN -> root.addView(reader(), LinearLayout.LayoutParams(-1, 0, 1f))
+            Screen.QURAN -> {
+                val screenView = PremiumMushafScreen(this,currentPage,catalog,ayahPlayer){ changePage(it) }
+                premium = screenView
+                root.addView(screenView.create(),LinearLayout.LayoutParams(-1,0,1f))
+            }
             Screen.SURAH -> root.addView(surahReader(), LinearLayout.LayoutParams(-1, 0, 1f))
             Screen.SETTINGS -> root.addView(settings(), LinearLayout.LayoutParams(-1, 0, 1f))
         }
@@ -167,7 +191,7 @@ class MainActivity : Activity() {
 
     private fun bottomNav(): View {
         val bar = row().apply {
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(darkGreen)
             elevation = dp(8).toFloat()
         }
         val tabs = listOf(
@@ -185,8 +209,8 @@ class MainActivity : Activity() {
                 isClickable = true
                 isFocusable = true
             }
-            tab.addView(text(glyph, 24f, if (active) green else muted, center = true))
-            tab.addView(text(label, 12f, if (active) green else muted, active, true))
+            tab.addView(text(glyph, 24f, if (active) Color.rgb(242,201,113) else cream, center = true))
+            tab.addView(text(label, 12f, if (active) Color.rgb(242,201,113) else cream, active, true))
             bar.addView(tab, LinearLayout.LayoutParams(0, -1, 1f))
         }
         return bar
@@ -244,7 +268,7 @@ class MainActivity : Activity() {
         categories.addView(text("İçerik durumu", 19f, darkGreen, true))
         gap(categories, 8)
         categories.addView(text(
-            "Mushaf sayfaları ve 114 tam sure APK içinde hazırlanıyor. Bir sayfayla sınırlı tilavet için doğru ses zamanları ayrıca kontrol edilmeli.",
+            "Altın-yeşil Mushaf okuyucu hazır. Ayet ayet sayfa tilaveti dosyaları varsa otomatik kullanılır. İndirme butonları şimdilik kapalıdır.",
             14f, muted
         ))
         body.addView(categories, matchWrap())
@@ -257,6 +281,7 @@ class MainActivity : Activity() {
         val target = MushafNavigation.move(currentPage, delta)
         if (target == currentPage) return
         audio.stop()
+        ayahPlayer.stop()
         currentPage = target
         getPreferences(MODE_PRIVATE).edit().putInt("page", target).apply()
         render()
