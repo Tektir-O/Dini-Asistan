@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 import fitz
 from PIL import Image, ImageDraw, ImageFont
+from mushaf_alignment import normalize_page
 
 pdf=Path(sys.argv[1]) if len(sys.argv)>1 else Path("mushaf-source.pdf")
 with fitz.open(pdf) as doc:
@@ -36,4 +37,26 @@ with fitz.open(pdf) as doc:
         buf=BytesIO()
         mosaic.save(buf,format="JPEG",quality=58,optimize=True)
         print(f"CONTACT_SHEET_BEGIN_{name.upper()}:"+base64.b64encode(buf.getvalue()).decode("ascii")+f":CONTACT_SHEET_END_{name.upper()}",flush=True)
+
+    selected=[4,5,6,7,8,9,10,11,80,81,302,303]
+    board=Image.new("RGB",(6*230,4*345),(235,236,235))
+    draw=ImageDraw.Draw(board)
+    shifts=[]
+    for idx,number in enumerate(selected):
+        page=doc[number-1]
+        pix=page.get_pixmap(matrix=fitz.Matrix(.85,.85),colorspace=fitz.csRGB,alpha=False)
+        original=Image.frombytes("RGB",(pix.width,pix.height),pix.samples)
+        aligned,delta=normalize_page(original)
+        shifts.append((number,delta))
+        for row,img in enumerate((original,aligned)):
+            thumbnail=img.copy()
+            thumbnail.thumbnail((220,308),Image.Resampling.LANCZOS)
+            col=idx%6
+            block=(idx//6)*2+row
+            board.paste(thumbnail,(col*230+(230-thumbnail.width)//2,block*345+27+(308-thumbnail.height)//2))
+            draw.text((col*230+8,block*345+4),f"PDF {number} " + ("ORIGINAL" if row==0 else "ALIGNED"),font=font,fill=(0,31,50))
+    buf=BytesIO()
+    board.save(buf,format="JPEG",quality=65,optimize=True)
+    print("MUSHAF_ALIGNMENT_SHIFTS:"+repr(shifts),flush=True)
+    print("CONTACT_SHEET_BEGIN_NORMALIZED:"+base64.b64encode(buf.getvalue()).decode("ascii")+":CONTACT_SHEET_END_NORMALIZED",flush=True)
     print("PDF contact sheets generated",flush=True)
