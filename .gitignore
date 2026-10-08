@@ -1,8 +1,0 @@
-.gradle/
-.idea/
-local.properties
-build/
-app/build/
-app/src/main/assets/mushaf/
-*.iml
-.DS_Store
