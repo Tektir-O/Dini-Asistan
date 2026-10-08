@@ -70,6 +70,7 @@ def download(number):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sample",action="store_true")
+    parser.add_argument("--no-archive",action="store_true",help="Only download + verify into dist directory for Android packaging")
     parser.add_argument("--start",type=int,default=1)
     parser.add_argument("--end",type=int,default=114)
     args = parser.parse_args()
@@ -104,12 +105,15 @@ def main():
     archive_name = ("Ali-el-Huzeyfi-Hafs-ORNEK-4-Sure.zip" if args.sample else
       "Ali-el-Huzeyfi-Hafs-114-Sure-MP3.zip" if (args.start==1 and args.end==114) else
       f"Ali-el-Huzeyfi-Hafs-{args.start:03d}-{args.end:03d}.zip")
-    archive = Path("dist")/archive_name
-    with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_STORED,allowZip64=True) as z:
-        for file in sorted(ROOT.iterdir()):
-            z.write(file,arcname=file.name)
-    print("RESULT",archive,"surahs",len(records),"size",archive.stat().st_size,
-          "bytes","sha256",checksum(archive),flush=True)
+    if not args.no_archive:
+        archive = Path("dist")/archive_name
+        with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_STORED,allowZip64=True) as z:
+            for file in sorted(ROOT.iterdir()):
+                z.write(file,arcname=file.name)
+        print("RESULT",archive,"surahs",len(records),"size",archive.stat().st_size,
+              "bytes","sha256",checksum(archive),flush=True)
+    else:
+        print("RESULT verified MP3 files on disk:",len(records),flush=True)
     if not args.sample and len(records) != args.end-args.start+1:
         raise SystemExit("ERROR: Missing surahs in requested range.")
 if __name__ == "__main__":
