@@ -59,7 +59,9 @@ jobs:
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            set -euo pipefail
+            # android-emulator-runner invokes this script with /bin/sh, not bash.
+            # POSIX sh supports -e and -u but not -o pipefail.
+            set -eu
             trap 'status=$?; if [ "$status" -ne 0 ]; then echo "ANDROID INSTALL/TEST FAILED: logs"; adb shell df -h /data || true; adb logcat -d -t 200 -s AndroidRuntime:E ActivityManager:E PackageManager:E MediaPlayer:E || true; fi; exit "$status"' EXIT
 
             echo "Waiting for package manager after boot"
