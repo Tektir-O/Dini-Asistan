@@ -3,11 +3,14 @@
 Hedef: Bir Arapça okuyucu, bir Türkçe meal ve Arapça Mushaf. İçerikler kurulumda hazır bulunacak, kullanıcı videoyu kendi isteğiyle paylaşabilecek.
 
 ## Arapça okuyucu
-- **Ali el-Huzeyfi (Hafs)**; yalnızca Kral Fahd Kur'an Basım Kompleksi'nin doğrudan yayımladığı resmî kayıtları kullanılacak.
-- Resmî arşiv: https://qurancomplex.gov.sa/category/kfgqpc-quran-audio/recite/moratal/hafs/huthify/
-- Kurum ses kayıtlarının yazılım, internet, yayın kanalları ve diğer alanlarda ücretsiz genel kullanıma açık olduğunu belirtiyor: https://qc-dev.qurancomplex.gov.sa/quran-audios/
-- Sesin MP4 içine alınması, yeniden kodlanması, TikTok ve gelir amaçlı kullanımı için izin metninin kapsamı ayrıca doğrulanacak. Platform telif eşleştirmesi tamamen engellenemez.
-- Henüz APK içine ses eklenmedi. Gerçek resmî kaynak, 114 sure ve SHA-256 doğrulanmadan ses düğmesi çalışıyor gösterilmeyecek.
+- **Ali el-Huzeyfi (Hafs an Asim)**, sure bazında 114 kayıt.
+- Bu ses paketindeki kayıtlar **MP3Quran.net** yayıncısından gelir. Bunlar **Kral Fahd Kompleksi resmî ana kayıtları** olarak sunulmamalıdır.
+- Okuyucu ve sure listesi: https://www.mp3quran.net/eng/hthfi
+- Sağlayıcı telif/yeniden kullanım koşulları: https://www.mp3quran.net/ar/privacy
+- MP3Quran.net sayfasında ziyaretçi ve geliştiricilerin içeriği kopyalamasına ve kullanmasına izin verilir. Yeniden paketlemede okuyucu ve sağlayıcı bilgileri korunur.
+- Kaynak MP3 sesleri derlemede indirilir, SHA-256 ve MP3 ses/durum kontrollerinden geçer; Android'e uygun Ogg/Opus olarak kodlanır. 114/114 codec, süre ve SHA-256 kontrolü zorunludur.
+- **Ayet bazlı otomatik ses ilerlemesi yoktur**; sure bazlı başlat/duraklat/devam/durdur vardır. Uygulamanın gerçek cihazda sesle denenmesi ayrıca gerekir.
+- MP4 içine ses koyma, platformların telif eşleştirme ve ticari gelir kuralları farklı olabilir. Üçüncü parti platform hak iddiası olmayacağı garanti edilemez.
 
 ## Türkçe meal
 - **Rowad Tercüme Merkezi**, Türkçe, QuranEnc kaynak anahtarı turkish_rwwad; sürüm 1.0.4 (28 Eylül 2025).
