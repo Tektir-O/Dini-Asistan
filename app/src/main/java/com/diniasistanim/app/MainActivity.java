@@ -620,16 +620,8 @@ public class MainActivity extends Activity {
         TextView heading=label("♫  ARAPÇA KUR’AN OKUYUCULARI",14,GOLD,true);
         panel.addView(heading);
         space(panel,10);
-        LinearLayout choices=row();
-        choices.addView(button("♙  Erkek Okuyucu",this::chooseTilavetSurah,true),
-            new LinearLayout.LayoutParams(0,dp(52),1));
-        choices.addView(new View(this),new LinearLayout.LayoutParams(dp(8),1));
-        choices.addView(button("♧  Bayan Okuyucu",()->new AlertDialog.Builder(this)
-                .setTitle("Bayan Okuyucular")
-                .setMessage("Bu sürümde doğrulanmış bayan Arapça tilavet ses dosyaları bulunmuyor.")
-                .setPositiveButton("Kapat",null).show(),false),
-            new LinearLayout.LayoutParams(0,dp(52),1));
-        panel.addView(choices);
+        panel.addView(button("♫  Erkek Okuyucu • Ali el-Huzeyfi",this::chooseTilavetSurah,true),
+            new LinearLayout.LayoutParams(-1,dp(52)));
         space(panel,9);
         String surah="Sure "+selectedTilavetSurah;
         if(index!=null)try{
@@ -834,17 +826,11 @@ public class MainActivity extends Activity {
             .setPositiveButton("Kapat",null).show();
     }
     private void readerPicker() {
-        new AlertDialog.Builder(this).setTitle("Arapça Okuyucular")
-            .setItems(new String[]{"Erkek okuyucu: Ali el-Huzeyfi (Hafs)",
-                                   "Bayan okuyucular"},(d,which)->{
-                if(which==0){arabic=true;tab(8);chooseTilavetSurah();}
-                else new AlertDialog.Builder(this)
-                    .setTitle("Bayan Okuyucular")
-                    .setMessage("Bayan okuyucu ses dosyaları bu APK içinde henüz bulunmuyor.")
-                    .setPositiveButton("Kapat",null).show();
-            }).show();
+        arabic=true;
+        prefs.edit().putBoolean("arabic",true).apply();
+        tab(8);
+        chooseTilavetSurah();
     }
-
     private int completedPages(){
         int count=0;
         for(int n=1;n<=604;n++)if(prefs.getBoolean("hatim_page_"+n,false))count++;
@@ -948,7 +934,7 @@ public class MainActivity extends Activity {
         String[] titles={"Ayet Ara","Okuyucular","Tecvid","Ezber","Hatim Takibi",
             "Nüzul Sırası","Secde Ayetleri","Kur’an Fihristi",
             "Kelime Meali","Kıraatler","Tefsir","Ayarlar"};
-        String[] details={"Sure ve ayet bul","Erkek & Bayan","Okuma kuralları",
+        String[] details={"Sure ve ayet bul","Ali el-Huzeyfi (Hafs)","Okuma kuralları",
             "Ezber takip listesi","Okunan sayfalar","İniş sıralaması",
             "Tilavet secdesi","Konulara göre ayet","Kelime anlamları",
             "Farklı okuyuşlar","Ayet açıklamaları","Uygulama ayarları"};
