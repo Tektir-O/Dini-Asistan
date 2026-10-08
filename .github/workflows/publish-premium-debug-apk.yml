@@ -1,0 +1,54 @@
+name: Publish direct Dini Asistan Premium Debug APK v0.4.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-premium-debug-apk.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish-direct-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN: "37826919205"
+      RELEASE_TAG: "v0.4.0-premium-debug"
+    steps:
+      - name: Verify successful Android test and load signed APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" --jq '.conclusion')" = success
+          mkdir -p apk
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name dini-asistan-premium-ayet-ayet-debug-apk --dir apk
+          test -s apk/DiniAsistan-Premium-AyetAyet-Debug.apk
+          unzip -tq apk/DiniAsistan-Premium-AyetAyet-Debug.apk | tail -1
+          mv apk/DiniAsistan-Premium-AyetAyet-Debug.apk apk/DiniAsistan-Premium-v0.4.0-Debug.apk
+          cd apk
+          sha256sum DiniAsistan-Premium-v0.4.0-Debug.apk > SHA256SUMS.txt
+          ls -lh DiniAsistan-Premium-v0.4.0-Debug.apk
+      - name: Publish direct APK as versioned GitHub prerelease (not an artifact ZIP)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Existing release $RELEASE_TAG found. Updating matching assets."
+            gh release upload "$RELEASE_TAG" apk/DiniAsistan-Premium-v0.4.0-Debug.apk apk/SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$RELEASE_TAG" \
+              apk/DiniAsistan-Premium-v0.4.0-Debug.apk \
+              apk/SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Dini Asistan Premium v0.4.0 Debug APK" \
+              --notes "Direct .apk download. Offline Quran: 604 Mushaf pages, 604 ayah-aligned recitation clips and 6,236 verse cues. Android emulator install/playback smoke test passed in Actions run $SOURCE_RUN. DEBUG signing only: future in-place upgrades require a stable signing key, which is not yet configured. Uninstall may be required when changing signer." \
+              --prerelease \
+              --latest=false
+          fi
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,assets | jq '{url,assets:[.assets[]|{name,size,downloadUrl:url}]}'
