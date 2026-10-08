@@ -101,37 +101,33 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: dini-asistan-premium-ayet-ayet-debug-apk
           path: app-test
-      - uses: reactivecircus/android-emulator-runner@v2
+
+      - name: Enable and verify KVM acceleration
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm || { echo "::error::KVM unavailable; refusing unstable software emulation"; exit 1; }
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          echo "KVM accelerated Android emulator ready"
+
+      - name: Validate Android smoke test script
+        run: bash -n .github/scripts/premium-apk-emulator-smoke.sh
+
+      - name: Install signed Premium APK and verify offline ayah playback
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 30
           arch: x86_64
           target: google_apis
           profile: pixel_2
-          disk-size: 4096M
+          disk-size: 6144M
           heap-size: 512M
           ram-size: 3072M
-          script: |
-            set -e
-            adb install -r app-test/DiniAsistan-Premium-AyetAyet-Debug.apk
-            adb shell am start -n com.dini.asistan.premium/com.dini.asistan.MainActivity --ez dini_internal_playback_test true
-            sleep 8
-            adb shell dumpsys activity activities | grep 'com.dini.asistan.premium'
-            adb shell uiautomator dump /sdcard/window.xml
-            adb pull /sdcard/window.xml screen.xml
-            python - <<'PY'
-            import xml.etree.ElementTree as ET
-            root=ET.parse('screen.xml').getroot()
-            nodes=list(root.iter('node'))
-            for text in ('Mushaf İndir','Tilavet İndir','Meal İndir','Video Oluştur'):
-                matching=[n for n in nodes if text in n.attrib.get('text','')]
-                assert matching, 'Missing button: '+text
-                assert all(n.attrib.get('enabled')=='false' for n in matching), 'Active forbidden button: '+text
-            assert any('Okunan ayet:' in n.attrib.get('text','') for n in nodes), 'No real verse playback label on screen'
-            assert any('Sayfa' in n.attrib.get('text','') and '/ 604' in n.attrib.get('text','') for n in nodes), 'Mushaf page missing'
-            print('PASS four disabled buttons, 604-page display and active verse player')
-            PY
-            echo 'PREMIUM APK INSTALLED, LAUNCHED, AND AYAH PLAYBACK UI VERIFIED'
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash .github/scripts/premium-apk-emulator-smoke.sh
