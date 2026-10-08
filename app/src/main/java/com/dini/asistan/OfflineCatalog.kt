@@ -43,6 +43,29 @@ class OfflineCatalog(private val context: Context) {
         return if (AyahCuePlan.valid(result)) result else emptyList()
     }
 
+    data class SurahPagePart(val page: Int, val fromMs: Int, val toMs: Int)
+
+    fun surahPlan(surah: Int): List<SurahPagePart> {
+        if(surah !in 1..114) return emptyList()
+        val total= try { JSONObject(
+            context.assets.open("quran/ayah-page-index.json").bufferedReader().use { it.readText() }
+        ).optJSONObject("surahVerseCounts")?.optInt(surah.toString(),0) ?: 0 }
+        catch (_:Exception) { 0 }
+        if(total<=0)return emptyList()
+        val clips=ArrayList<SurahPagePart>()
+        var count=0
+        for(page in 1..604){
+            val all=ayahCues(page)
+            val selected=all.filter{it.surah==surah}
+            if(selected.isEmpty())continue
+            if(selected.first().ayah!=count+1)return emptyList()
+            count+=selected.size
+            if(!hasAyahPage(page))return emptyList()
+            clips.add(SurahPagePart(page,selected.first().fromMs,selected.last().toMs))
+        }
+        return if(count==total)clips else emptyList()
+    }
+
     fun hasAyahPage(page: Int): Boolean = page in 1..604 && ayahCues(page).isNotEmpty() && try {
         context.assets.openFd(ayahAudioPath(page)).close()
         true
