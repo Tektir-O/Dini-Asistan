@@ -46,6 +46,9 @@ jobs:
           test -r /dev/kvm && test -w /dev/kvm
           echo "PASS: /dev/kvm accessible. Android emulator can use hardware acceleration."
 
+      - name: Validate Android Bash smoke script syntax
+        run: bash -n .github/scripts/premium-apk-emulator-smoke.sh
+
       - name: Install and verify real Arabic ayah playback on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -58,48 +61,4 @@ jobs:
           ram-size: 3072M
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: |
-            # android-emulator-runner invokes this script with /bin/sh, not bash.
-            # POSIX sh supports -e and -u but not -o pipefail.
-            set -eu
-            trap 'status=$?; if [ "$status" -ne 0 ]; then echo "ANDROID INSTALL/TEST FAILED: logs"; adb shell df -h /data || true; adb logcat -d -t 200 -s AndroidRuntime:E ActivityManager:E PackageManager:E MediaPlayer:E || true; fi; exit "$status"' EXIT
-
-            echo "Waiting for package manager after boot"
-            for n in $(seq 1 35); do
-              if adb shell pm path android >/dev/null 2>&1; then break; fi
-              sleep 3
-            done
-            adb shell pm path android
-            adb shell df -h /data
-
-            echo "Installing 295 MB APK without the unreliable ADB streaming transport"
-            if ! adb install --no-streaming -r "$APK"; then
-              echo "Non-streamed install failed; trying ADB push plus Android package manager"
-              adb push "$APK" /data/local/tmp/dini-premium.apk
-              adb shell pm install -r /data/local/tmp/dini-premium.apk
-              adb shell rm -f /data/local/tmp/dini-premium.apk
-            fi
-            adb shell pm path "$PACKAGE"
-            echo "PASS: Android package installed"
-
-            echo "Launching premium reader and verified local Quran page playback"
-            adb shell am start -W -n "$PACKAGE/com.dini.asistan.MainActivity" --ez dini_internal_playback_test true
-            sleep 12
-            adb shell dumpsys activity activities | grep -F "$PACKAGE"
-
-            echo "Checking four buttons are disabled, page label and real ayah progress visible"
-            adb shell uiautomator dump /sdcard/window.xml
-            adb pull /sdcard/window.xml screen.xml
-            python - <<'PY'
-            import xml.etree.ElementTree as ET
-            root=ET.parse("screen.xml").getroot()
-            nodes=list(root.iter("node"))
-            for name in ["Mushaf İndir","Tilavet İndir","Meal İndir","Video Oluştur"]:
-                found=[x for x in nodes if name in x.attrib.get("text","")]
-                assert found, "UI button not visible: "+name
-                assert all(x.attrib.get("enabled")=="false" for x in found), "UI button unexpectedly enabled: "+name
-            assert any("Sayfa" in x.attrib.get("text","") and "/ 604" in x.attrib.get("text","") for x in nodes), "Page count missing"
-            assert any("Okunan ayet:" in x.attrib.get("text","") for x in nodes), "Actual verse playback label missing"
-            print("PASS: disabled buttons, visible 604 Mushaf indicator, ayah playback is running")
-            PY
-            echo "PASS: premium APK installed and Arabic Quran audio playback UI verified"
+          script: bash .github/scripts/premium-apk-emulator-smoke.sh
