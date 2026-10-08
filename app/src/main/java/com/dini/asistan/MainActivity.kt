@@ -97,6 +97,13 @@ class MainActivity : Activity() {
             }
         )
         render()
+        // Internal QA route: emulator can prove local page audio starts.
+        // Never enabled in a non-debuggable/release installation.
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
+            intent.getBooleanExtra("dini_internal_playback_test", false)) {
+            navigate(Screen.QURAN)
+            ayahPlayer.play(currentPage)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
