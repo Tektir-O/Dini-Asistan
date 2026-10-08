@@ -2,11 +2,6 @@ name: Mushaf ve Tilavet Kaynaklarini Hazirla
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/prepare-offline-sources.yml"
-      - "scripts/download_mirror.py"
 
 permissions:
   contents: write
@@ -100,7 +95,8 @@ jobs:
         run: |
           tag="offline-hafs-maher-archive-v2"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "${GITHUB_SHA}" \
+            gh release create "$tag" --draft --target "${GITHUB_SHA}" \
               --title "Mushaf ham PDF ve 114 tam sure (kaynak paketi)" \
               --notes "Dikkat: 640 sayfalik ham mushaf PDF + 114 sure Opus. Bu bir APK degildir. Ses kayitlari Haramain Recordings Internet Archive aynasindan gelmektedir. Aynadaki kayitlarin Kral Fehd Kumpleksi tarafindan yayinlanan izinli surumle ayniligi bagimsiz onaylanmamistir. Yayin oncesinde kaynak ve 604 sayfa kontrolu gerekir. SOURCE-MANIFEST.json icindeki SHA256 degerlerini inceleyin."
+          fi
           gh release upload "$tag" offline-quran-hafs-maher-sources.zip --clobber
