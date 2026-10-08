@@ -51,4 +51,4 @@ jobs:
               --prerelease \
               --latest=false
           fi
-          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,assets | jq '{url,assets:[.assets[]|{name,size,downloadUrl:url}]}'
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,assets | jq '{url,assets:[.assets[]|{name,size,downloadUrl:.url}]}'
