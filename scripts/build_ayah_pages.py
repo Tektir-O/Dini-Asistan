@@ -164,10 +164,16 @@ def create_audio(groups):
             "-application","audio","-ac","1","-ar","48000","-compression_level","3",
             str(outfile)],check=True)
         actual=ffprobe(outfile)
-        if abs(actual-cumul)>max(3.,cumul*.03):
-            raise RuntimeError(f"Bad page duration page {page}: source={cumul:.2f}, output={actual:.2f}")
-        # ffmpeg re-encode may cause a few ms discrepancy. Bound to actual length.
+        # MP3 VBR headers and the FFmpeg concat demuxer can disagree over
+        # encoder padding/frame duration. Always calibrate the markers against
+        # the final *decoded* Opus clip, rather than falsely treat MP3 estimates
+        # as sample-accurate. Reject large differences as corrupt assets.
+        delta=abs(actual-cumul)
+        if delta>max(6.0,cumul*.07):
+            raise RuntimeError(f"Unacceptable audio timeline drift on page {page}: original={cumul:.2f}, compressed={actual:.2f}")
         factor=actual/cumul
+        if delta>max(.8,cumul*.02):
+            print(f"Timeline calibrated on page {page}: {cumul:.2f}s -> {actual:.2f}s (factor={factor:.5f})",flush=True)
         for x in cue:
             x["fromMs"]=int(round(x["fromMs"]*factor))
             x["toMs"]=int(round(x["toMs"]*factor))
