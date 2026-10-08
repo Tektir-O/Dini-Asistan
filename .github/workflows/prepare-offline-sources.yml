@@ -1,52 +1,106 @@
 name: Mushaf ve Tilavet Kaynaklarini Hazirla
+
 on:
   workflow_dispatch:
-    inputs:
-      maher_surahs_url:
-        description: "Resmi Mahir el-Muaykili 114 sure arsiv baglantisi (bos = otomatik bul)"
-        required: false
-        type: string
   push:
     branches: [main]
     paths:
       - ".github/workflows/prepare-offline-sources.yml"
-      - "scripts/download_sources.py"
+      - "scripts/download_mirror.py"
+
 permissions:
   contents: write
+
+concurrency:
+  group: quran-offline-resources
+  cancel-in-progress: false
+
 jobs:
-  download-assets:
+  mushaf:
+    name: Mushaf PDF kaynagini indir
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 45
     steps:
-      - name: Projeyi al
-        uses: actions/checkout@v4
-      - name: Python kur
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Araclari kur
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y p7zip-full
-          python -m pip install --no-cache-dir requests beautifulsoup4 pypdf
-      - name: Resmi kaynaklari indir ve 114 ses dosyasini dogrula
-        env:
-          MAHER_SURAHS_URL: ${{ inputs.maher_surahs_url || '' }}
-        run: python scripts/download_sources.py
-      - name: SHA256 raporunu ve arsivleri kaydet
+      - run: python -m pip install --no-cache-dir requests pypdf
+      - name: 640 sayfalik kaynak PDF'yi indir ve kontrol et
+        run: python scripts/download_mirror.py mushaf
+      - name: Mushaf dosyasini sakla
         uses: actions/upload-artifact@v4
         with:
-          name: offline-quran-hafs-maher-sources
+          name: assets-mushaf
           path: offline-sources/
           retention-days: 30
           if-no-files-found: error
-      - name: Basarili ve dogrulanmis kaynak arsivlerini Releases alanina yukle
+
+  audio:
+    name: "Tilavet paket bolumu ${{ matrix.part }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Ses araclarini kur
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          python -m pip install --no-cache-dir requests
+      - name: Sesleri indir ve opus formatina cevir
+        run: python scripts/download_mirror.py audio --shard ${{ matrix.part }} --shards 3
+      - name: Tamamlanan sesleri sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets-audio-${{ matrix.part }}
+          path: offline-sources/
+          retention-days: 30
+          if-no-files-found: error
+
+  verify-and-publish:
+    name: 114 sure ve Mushaf eksiksiz mi kontrol et
+    needs: [mushaf, audio]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --no-cache-dir requests pypdf
+      - name: Dosyalari birlestir
+        uses: actions/download-artifact@v4
+        with:
+          pattern: assets-*
+          path: offline-sources/
+          merge-multiple: true
+      - name: 114 sure, PDF ve SHA256 kontrolu
+        run: python scripts/download_mirror.py verify
+      - name: Nihai kaynak paketini hazirla
+        run: |
+          zip -0 -q -r offline-quran-hafs-maher-sources.zip offline-sources
+          ls -lh offline-quran-hafs-maher-sources.zip
+      - name: Kaynak paketini Action artifacts'a yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-quran-offline-source-package
+          path: offline-quran-hafs-maher-sources.zip
+          retention-days: 30
+          if-no-files-found: error
+      - name: Kaynak dosyalarini GitHub Releases'a yukle
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="offline-hafs-maher-sources-v1"
+          tag="offline-hafs-maher-archive-v2"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "${GITHUB_SHA}" --title "Çevrimdışı Mushaf + Mahir Tilavet Kaynakları" \
-              --notes "Kral Fehd Mushaf 1441H ham PDF (matbu sayfalar henüz ayrıştırılmadı) ve Mahir el-Muaykılî Hafs 114 MP3 içeren kaynak arşivi. Kaynak URL'leri, SHA256 ve izinler SOURCE-MANIFEST.json ile assets/README.md içinde. Bu bir APK değildir."
-          fi
-          gh release upload "$tag" offline-sources/* --clobber
+            gh release create "$tag" --target "${GITHUB_SHA}" \
+              --title "Mushaf ham PDF ve 114 tam sure (kaynak paketi)" \
+              --notes "Dikkat: 640 sayfalik ham mushaf PDF + 114 sure Opus. Bu bir APK degildir. Ses kayitlari Haramain Recordings Internet Archive aynasindan gelmektedir. Aynadaki kayitlarin Kral Fehd Kumpleksi tarafindan yayinlanan izinli surumle ayniligi bagimsiz onaylanmamistir. Yayin oncesinde kaynak ve 604 sayfa kontrolu gerekir. SOURCE-MANIFEST.json icindeki SHA256 degerlerini inceleyin."
+          gh release upload "$tag" offline-quran-hafs-maher-sources.zip --clobber
