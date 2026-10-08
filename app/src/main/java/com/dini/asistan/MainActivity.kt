@@ -24,7 +24,7 @@ import android.widget.Toast
  * Assets are embedded at build time; NEVER loaded over the network.
  */
 class MainActivity : Activity() {
-    private enum class Screen { HOME, QURAN, SETTINGS }
+    private enum class Screen { HOME, QURAN, SURAH, SETTINGS }
 
     private val background = Color.rgb(245, 247, 244)
     private val darkGreen = Color.rgb(11, 72, 64)
@@ -35,17 +35,21 @@ class MainActivity : Activity() {
 
     private lateinit var catalog: OfflineCatalog
     private lateinit var audio: PageAudioController
+    private lateinit var surahAudio: SurahAudioController
     private var screen = Screen.HOME
     private var currentPage = 1
+    private var currentSurah = 1
     private var playbackStatus = "Hazir"
     private var statusText: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        currentSurah = (savedInstanceState?.getInt("surah") ?: getPreferences(MODE_PRIVATE).getInt("surah", 1)).coerceIn(1, 114)
         currentPage = savedInstanceState?.getInt("page")
             ?: getPreferences(MODE_PRIVATE).getInt("page", 1).coerceIn(1, 604)
         screen = when (savedInstanceState?.getString("screen")) {
             "QURAN" -> Screen.QURAN
+            "SURAH" -> Screen.SURAH
             "SETTINGS" -> Screen.SETTINGS
             else -> Screen.HOME
         }
@@ -64,17 +68,28 @@ class MainActivity : Activity() {
                 }
             }
         )
+        surahAudio = SurahAudioController(this, catalog,
+            onState = { msg ->
+                playbackStatus = msg
+                runOnUiThread { statusText?.text = msg }
+            },
+            onError = { msg ->
+                runOnUiThread { statusText?.text = msg; Toast.makeText(this, msg, Toast.LENGTH_LONG).show() }
+            }
+        )
         render()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt("page", currentPage)
+        outState.putInt("surah", currentSurah)
         outState.putString("screen", screen.name)
         super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
         audio.release()
+        surahAudio.release()
         super.onDestroy()
     }
 
@@ -131,6 +146,7 @@ class MainActivity : Activity() {
 
     private fun navigate(target: Screen) {
         if (screen == Screen.QURAN && target != Screen.QURAN) audio.stop()
+        if (screen == Screen.SURAH && target != Screen.SURAH) surahAudio.stop()
         screen = target
         render()
     }
@@ -141,6 +157,7 @@ class MainActivity : Activity() {
         when (screen) {
             Screen.HOME -> root.addView(home(), LinearLayout.LayoutParams(-1, 0, 1f))
             Screen.QURAN -> root.addView(reader(), LinearLayout.LayoutParams(-1, 0, 1f))
+            Screen.SURAH -> root.addView(surahReader(), LinearLayout.LayoutParams(-1, 0, 1f))
             Screen.SETTINGS -> root.addView(settings(), LinearLayout.LayoutParams(-1, 0, 1f))
         }
         root.addView(bottomNav(), LinearLayout.LayoutParams(-1, dp(72)))
@@ -155,6 +172,7 @@ class MainActivity : Activity() {
         val tabs = listOf(
             Triple(Screen.HOME, "⌂", "Ana Menü"),
             Triple(Screen.QURAN, "☷", "Kur’an"),
+            Triple(Screen.SURAH, "♫", "Tilavet"),
             Triple(Screen.SETTINGS, "⚙", "Ayarlar")
         )
         for ((destination, glyph, label) in tabs) {
@@ -206,11 +224,26 @@ class MainActivity : Activity() {
         gap(quranCard, 9)
         quranCard.addView(text("604 sayfalık okuyucuyu aç  ›", 14f, green, true))
         categories.addView(quranCard, matchWrap())
+        gap(categories, 12)
+        val surahCard = column().apply {
+            background = rounded(Color.WHITE)
+            elevation = dp(2).toFloat()
+            sectionPadding(this, 19, 18)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { navigate(Screen.SURAH) }
+        }
+        surahCard.addView(text("♫  ARAPÇA TİLAVET", 20f, darkGreen, true))
+        gap(surahCard, 8)
+        surahCard.addView(text("Mahir el-Muaykılî • 114 tam sure • Çevrimdışı", 14f, muted))
+        gap(surahCard, 8)
+        surahCard.addView(text("Sureleri dinle  ›", 14f, green, true))
+        categories.addView(surahCard, matchWrap())
         gap(categories, 20)
         categories.addView(text("İçerik durumu", 19f, darkGreen, true))
         gap(categories, 8)
         categories.addView(text(
-            "Sayfa görselleri ve sayfaya özel ses zamanları doğrulandıktan sonra APK’ya gömülecek. Eksik içeriği tamamlanmış gibi göstermiyoruz.",
+            "Mushaf sayfaları ve 114 tam sure APK içinde hazırlanıyor. Bir sayfayla sınırlı tilavet için doğru ses zamanları ayrıca kontrol edilmeli.",
             14f, muted
         ))
         body.addView(categories, matchWrap())
@@ -226,6 +259,67 @@ class MainActivity : Activity() {
         currentPage = target
         getPreferences(MODE_PRIVATE).edit().putInt("page", target).apply()
         render()
+    }
+
+    private fun changeSurah(delta: Int) {
+        val target = (currentSurah + delta).coerceIn(1, 114)
+        if (target == currentSurah) return
+        surahAudio.stop()
+        currentSurah = target
+        getPreferences(MODE_PRIVATE).edit().putInt("surah", target).apply()
+        render()
+    }
+
+    private fun surahReader(): View {
+        val body = column()
+        val top = column().apply {
+            setBackgroundColor(darkGreen)
+            sectionPadding(this, 20, 19)
+        }
+        top.addView(text("ARAPÇA TİLAVET", 21f, Color.WHITE, true))
+        gap(top, 5)
+        top.addView(text("Mahir el-Muaykılî (Hafs) • 114 tam sure", 13f, cream))
+        body.addView(top, matchWrap())
+
+        val main = column().apply { sectionPadding(this, 18, 30) }
+        main.addView(text("♫", 58f, green, center = true))
+        gap(main, 15)
+        main.addView(text("Sure $currentSurah / 114", 23f, darkGreen, true, true))
+        gap(main, 12)
+        val state = if (catalog.hasSurahAudio(currentSurah))
+            "Ses APK içinde • İnternet gerekmiyor"
+        else "Bu surenin sesi henüz APK içinde değil"
+        main.addView(text(state, 15f, muted, center = true))
+        gap(main, 20)
+        val pager = row()
+        pager.addView(button("‹ Önceki sure", darkGreen) { changeSurah(-1) }.apply {
+            isEnabled = currentSurah > 1
+        }, LinearLayout.LayoutParams(0, dp(52), 1f))
+        pager.addView(button("Sonraki sure ›", darkGreen) { changeSurah(1) }.apply {
+            isEnabled = currentSurah < 114
+        }, LinearLayout.LayoutParams(0, dp(52), 1f))
+        main.addView(pager, matchWrap())
+        gap(main, 12)
+        val controls = row()
+        controls.addView(button("▶ Başlat") {
+            audio.stop()
+            surahAudio.play(currentSurah)
+        }, LinearLayout.LayoutParams(0, dp(55), 1f))
+        controls.addView(button("Ⅱ Duraklat", Color.rgb(117, 120, 99)) {
+            surahAudio.pauseOrResume()
+        }, LinearLayout.LayoutParams(0, dp(55), 1f))
+        controls.addView(button("■ Durdur", Color.rgb(145, 76, 64)) {
+            surahAudio.stop()
+        }, LinearLayout.LayoutParams(0, dp(55), 1f))
+        main.addView(controls, matchWrap())
+        gap(main, 12)
+        val status = text(playbackStatus, 13f, muted, center = true)
+        statusText = status
+        main.addView(status, matchWrap())
+        gap(main, 30)
+        main.addView(text("Not: Sure dinleme bütün sureyi çalar. Mushafın yalnızca açık sayfasını okutan ayrı kontrol, doğrulanmış sayfa ses zamanları eklenince çalışacaktır.", 13f, muted))
+        body.addView(main, matchWrap())
+        return body
     }
 
     private fun reader(): View {
