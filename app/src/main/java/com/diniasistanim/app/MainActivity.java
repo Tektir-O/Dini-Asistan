@@ -31,6 +31,8 @@ public class MainActivity extends Activity {
     private int page=1, bookmark=0, section=0;
     private boolean arabic=true;
     private final String reader="Ali el-Huzeyfi (Hafs)";
+    private TilavetPlayer tilavet;
+    private int selectedTilavetSurah=1;
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -40,6 +42,8 @@ public class MainActivity extends Activity {
         page=Math.max(1,Math.min(604,prefs.getInt("page",1)));
         bookmark=prefs.getInt("bookmark",0);
         arabic=prefs.getBoolean("arabic",true);
+        selectedTilavetSurah=Math.max(1,Math.min(114,prefs.getInt("tilavet_surah",1)));
+        tilavet=new TilavetPlayer(this,()->{if(section==8 || section==2)render();});
         try (InputStream in=getAssets().open("quran-index.json")) {
             java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();
             byte[] buffer=new byte[8192]; int n;
@@ -53,6 +57,10 @@ public class MainActivity extends Activity {
             meal=new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
         } catch (Exception ignored) { meal=null; }
         render();
+    }
+    @Override protected void onDestroy() {
+        if(tilavet!=null)tilavet.release();
+        super.onDestroy();
     }
     private int dp(int n) { return Math.round(n*getResources().getDisplayMetrics().density); }
     private LinearLayout column() { LinearLayout l=new LinearLayout(this); l.setOrientation(1); return l; }
@@ -203,7 +211,7 @@ public class MainActivity extends Activity {
         space(content,10);
         content.addView(label("Kategorileri keşfet",20,WHITE,true));
         space(content,11);
-        categoryPair(content,"📖","Kur’an","Mushaf ve Türkçe meal",true,()->tab(2),
+        categoryPair(content,"📖","Kur’an","Mushaf ve Türkçe meal",true,()->goPage(page),
              "◉","Tesbihat","Dijital zikir sayacı",true,()->tab(3));
         categoryPair(content,"☼","İbadet Takibi","Günlük işaretleme",true,()->tab(5),
              "✎","Notlarım","Kişisel kayıtlar",true,()->tab(4));
@@ -451,12 +459,13 @@ public class MainActivity extends Activity {
     }
 
     private void mushafReader(LinearLayout content) {
-        content.addView(button("‹  Kur’an Menüsüne Dön",()->tab(2),false));
+        content.addView(button("‹  Kategoriler",()->tab(1),false));
         space(content,12);
         LinearLayout tabs=row();
         tabs.addView(button("ARAPÇA",()->mode(true),arabic),new LinearLayout.LayoutParams(0,-2,1));
         tabs.addView(button("TÜRKÇE MEAL",()->mode(false),!arabic),new LinearLayout.LayoutParams(0,-2,1));
         content.addView(tabs);space(content,10);
+        if(arabic)tilavetControls(content);
         LinearLayout find=row();
         find.addView(button("Sure / Ayet",this::searchAyah,false),new LinearLayout.LayoutParams(0,-2,1));
         find.addView(button("Sayfaya Git",this::searchPage,false),new LinearLayout.LayoutParams(0,-2,1));
@@ -484,13 +493,67 @@ public class MainActivity extends Activity {
         } else {
             showTurkishMeal(content);
         }
-        space(content,18);
-        content.addView(label("Arapça okuyucu • tek okuyucu",14,MUTE,true));space(content,8);
-        content.addView(button(reader,()->toast("Resmî ses kaydı henüz kurulum paketine eklenmedi."),false));
-        space(content,8);
-        content.addView(label("Tilavet kaynağı: Kral Fahd Kur’an Basım Kompleksi. " +
-                "Yalnızca resmî kaydın 114 suresi doğrulanınca çevrimdışı ses etkinleştirilecek.",
-                12,MUTE,false));
+        space(content,12);
+    }
+    /** Only verified, packaged offline recordings are offered for playback. */
+    private void tilavetControls(LinearLayout content){
+        LinearLayout row=row();
+        row.addView(button("♫  "+reader,()->chooseTilavetSurah(),false),
+            new LinearLayout.LayoutParams(0,-2,1));
+        content.addView(row);space(content,6);
+        String name="Sure "+selectedTilavetSurah;
+        if(index!=null)try{
+            JSONArray surahs=index.getJSONArray("surahs");
+            name=surahs.getJSONObject(selectedTilavetSurah-1).optString("name",name);
+        }catch(Exception ignored){}
+        content.addView(label("Dinlenecek sure: "+selectedTilavetSurah+" • "+name,
+            13,MUTE,false));space(content,6);
+        boolean available=tilavet!=null && tilavet.bundled(selectedTilavetSurah);
+        if(tilavet!=null && tilavet.loading())
+            content.addView(label("Ses kaydı hazırlanıyor...",13,MUTE,false));
+        else if(!available)
+            content.addView(label("Bu surenin çevrimdışı ses dosyası henüz pakette yok.",
+                13,MUTE,false));
+        else if(tilavet.playing())
+            content.addView(label("Tilavet çalıyor",13,GOLD,true));
+        else if(tilavet.surah()==selectedTilavetSurah)
+            content.addView(label("Tilavet duraklatıldı",13,MUTE,false));
+        if(tilavet!=null && !tilavet.error().isEmpty())
+            content.addView(label(tilavet.error(),13,MUTE,false));
+        space(content,6);
+        LinearLayout controls=row();
+        boolean same=tilavet!=null && tilavet.surah()==selectedTilavetSurah;
+        String caption=tilavet!=null && tilavet.loading()?"Hazırlanıyor":
+            same && tilavet.playing()?"❚❚ Duraklat":
+            same?"▶ Devam":"▶ Sureyi Dinle";
+        controls.addView(button(caption,()->{
+            if(tilavet!=null)tilavet.toggle(selectedTilavetSurah);
+        },available && !tilavet.loading()),new LinearLayout.LayoutParams(0,-2,1));
+        controls.addView(button("■ Durdur",()->{
+            if(tilavet!=null)tilavet.stop();
+        },false),new LinearLayout.LayoutParams(0,-2,1));
+        content.addView(controls);
+        space(content,5);
+        content.addView(label("Okuma seçilen surenin başından başlar. "
+            +"Ayet bazlı ses takibi doğrulanmadan kullanılmaz.",12,MUTE,false));
+        space(content,12);
+    }
+    private void chooseTilavetSurah(){
+        if(index==null){toast("Sure listesi bu pakette bulunamadı.");return;}
+        try{
+            JSONArray surahs=index.getJSONArray("surahs");
+            String[] labels=new String[surahs.length()];
+            for(int i=0;i<labels.length;i++){
+                JSONObject entry=surahs.getJSONObject(i);
+                labels[i]=(i+1)+". "+entry.optString("name","Sure "+(i+1));
+            }
+            new AlertDialog.Builder(this).setTitle("Dinlenecek sure")
+                .setSingleChoiceItems(labels,selectedTilavetSurah-1,(d,which)->{
+                    selectedTilavetSurah=which+1;
+                    prefs.edit().putInt("tilavet_surah",selectedTilavetSurah).apply();
+                    d.dismiss();render();
+                }).setNegativeButton("İptal",null).show();
+        }catch(Exception e){toast("Sure listesi açılamadı.");}
     }
     private void showTurkishMeal(LinearLayout content) {
         content.addView(label("Türkçe Meal • Sayfa "+page+" / 604",19,GOLD,true));
