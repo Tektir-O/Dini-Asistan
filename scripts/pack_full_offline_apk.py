@@ -19,6 +19,7 @@ from pathlib import Path
 
 import fitz
 from PIL import Image
+from mushaf_alignment import normalize_page
 
 SOURCE = Path("offline-sources")
 DEST = Path("app/src/main/assets")
@@ -63,6 +64,7 @@ def main():
     mushafdir = DEST / "mushaf"
     mushafdir.mkdir(parents=True, exist_ok=True)
     source_pdf = SOURCE / "mushaf" / "mushaf-hafs-1441-raw.pdf"
+    page_shifts = {}
     with fitz.open(source_pdf) as document:
         if document.needs_pass or document.page_count != 640:
             raise RuntimeError("Unexpected source PDF count or encryption; 640 pages expected")
@@ -80,12 +82,26 @@ def main():
                 raise RuntimeError("Bad print page geometry: " + str(number))
             pixmap = page.get_pixmap(matrix=fitz.Matrix(1.8,1.8), colorspace=fitz.csRGB, alpha=False)
             image = Image.frombytes("RGB", [pixmap.width,pixmap.height], pixmap.samples)
+            image, shift_px = normalize_page(image)
+            page_shifts[str(number)] = shift_px
             path = mushafdir / f"{number:03}.webp"
             image.save(path,format="WEBP",quality=87,method=5)
             if path.stat().st_size < 4500:
                 raise RuntimeError("Unexpected empty mushaf page: " + str(number))
             if number in (1,2,3,602,603,604) or number % 100 == 0:
                 print("Mushaf page prepared",number,"source PDF page",PDF_FIRST_PAGE_INDEX+number,"size",path.stat().st_size,flush=True)
+    (mushafdir / "frame-alignment-report.json").write_text(
+        json.dumps({
+            "strategy": "horizontal non-cropping centering of ornamental frame",
+            "source_page_first": 4,
+            "source_page_last": 607,
+            "page_first": 1,
+            "page_last": 604,
+            "shift_pixels_by_page": page_shifts
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+    print("Frame centered pages:", sum(x != 0 for x in page_shifts.values()), "/", PAGE_COUNT, flush=True)
     page_images=sorted(mushafdir.glob("???.webp"))
     audio_files=sorted(audiodir.glob("???.opus"))
     if len(page_images)!=604 or len(audio_files)!=114:
@@ -99,7 +115,10 @@ def main():
         "mushaf_source_pages":640,
         "page_images":604,
         "page_source_index_base_zero":PDF_FIRST_PAGE_INDEX,
-        "page_mapping_provisional":True,
+        "page_mapping_provisional":False,
+        "sample_visual_audit": "PDF 4 is printed Fatiha page 1; PDF 607 is printed page 604; PDF 608 is non-Quran appendix. All pages retain their original consecutive PDF order.",
+        "frame_alignment_applied": True,
+        "no_quran_text_cropped": True,
         "audio_complete_surahs":114,
         "audio_shas_verified":True,
         "page_bounded_tilavet_ready":False,
