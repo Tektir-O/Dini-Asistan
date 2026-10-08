@@ -6,10 +6,18 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/android-offline-all.yml"
+      - "app/**"
+      - "scripts/pack_full_offline_apk.py"
+      - "scripts/mushaf_alignment.py"
+      - "scripts/test_mushaf_alignment.py"
 
 permissions:
   actions: read
   contents: read
+
+concurrency:
+  group: full-offline-quran-apk
+  cancel-in-progress: true
 
 jobs:
   assemble-all:
@@ -41,6 +49,9 @@ jobs:
 
       - name: Mushaf render icin Python kutuphanelerini kur
         run: python -m pip install --no-cache-dir PyMuPDF Pillow
+
+      - name: Sayfa hizalama algoritmasinin otomatik testleri
+        run: python scripts/test_mushaf_alignment.py
 
       - name: Daha once kontrol edilmis 114 ses ve Mushaf paketini GitHub'dan al
         run: |
@@ -82,11 +93,21 @@ jobs:
           echo "114 sure pakette: $AUDIO_COUNT"
           test "$PAGE_COUNT" -eq 604
           test "$AUDIO_COUNT" -eq 114
+          unzip -p "$APK" assets/mushaf/frame-alignment-report.json > embedded-frame-alignment-report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('embedded-frame-alignment-report.json').read_text())
+          assert data['page_first']==1 and data['page_last']==604
+          assert data['source_page_first']==4 and data['source_page_last']==607
+          assert len(data['shift_pixels_by_page'])==604
+          print('PASS: Correct Mushaf source PDF order and 604 standardized image positions')
+          PY
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           sha256sum "$APK" > apk.sha256
           echo "APK size:"
           ls -lh "$APK"
-          echo "TEST OK: APK has 604 WebP pages + 114 Opus surahs + NO INTERNET permission."
+          echo "TEST OK: 604 ordered and horizontally aligned Mushaf pages, 114 Opus surahs, NO INTERNET permission."
 
       - name: Tek APK ve dogrulama raporu
         uses: actions/upload-artifact@v4
