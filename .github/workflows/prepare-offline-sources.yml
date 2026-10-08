@@ -1,0 +1,52 @@
+name: Mushaf ve Tilavet Kaynaklarini Hazirla
+on:
+  workflow_dispatch:
+    inputs:
+      maher_surahs_url:
+        description: "Resmi Mahir el-Muaykili 114 sure arsiv baglantisi (bos = otomatik bul)"
+        required: false
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prepare-offline-sources.yml"
+      - "scripts/download_sources.py"
+permissions:
+  contents: write
+jobs:
+  download-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Projeyi al
+        uses: actions/checkout@v4
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Araclari kur
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y p7zip-full
+          python -m pip install --no-cache-dir requests beautifulsoup4 pypdf
+      - name: Resmi kaynaklari indir ve 114 ses dosyasini dogrula
+        env:
+          MAHER_SURAHS_URL: ${{ inputs.maher_surahs_url || '' }}
+        run: python scripts/download_sources.py
+      - name: SHA256 raporunu ve arsivleri kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-quran-hafs-maher-sources
+          path: offline-sources/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Basarili ve dogrulanmis kaynak arsivlerini Releases alanina yukle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="offline-hafs-maher-sources-v1"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "${GITHUB_SHA}" --title "Çevrimdışı Mushaf + Mahir Tilavet Kaynakları" \
+              --notes "Kral Fehd Mushaf 1441H ham PDF (matbu sayfalar henüz ayrıştırılmadı) ve Mahir el-Muaykılî Hafs 114 MP3 içeren kaynak arşivi. Kaynak URL'leri, SHA256 ve izinler SOURCE-MANIFEST.json ile assets/README.md içinde. Bu bir APK değildir."
+          fi
+          gh release upload "$tag" offline-sources/* --clobber
