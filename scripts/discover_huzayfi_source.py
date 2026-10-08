@@ -73,5 +73,28 @@ def main():
             print("PROBE_ERROR", source, repr(exc), flush=True)
 
 
+    # Historical mirror attributed to the King Fahd Complex recording:
+    # https://aelaa.net/Fa/viewtopic.php?f=288&t=690
+    mirror = "https://archive.org/metadata/zyfyhfssssddddd"
+    print("MIRROR_METADATA", mirror, flush=True)
+    try:
+        import json
+        with urllib.request.urlopen(urllib.request.Request(mirror, headers={"User-Agent": "DiniAsistanim/1.0"}), timeout=18) as response:
+            data = json.load(response)
+        meta = data.get("metadata", {})
+        print("MIRROR_TITLE", repr(meta.get("title")), flush=True)
+        print("MIRROR_CREATOR", repr(meta.get("creator")), flush=True)
+        print("MIRROR_LICENSE", repr(meta.get("licenseurl")), flush=True)
+        files = data.get("files", [])
+        print("MIRROR_FILE_COUNT", len(files), flush=True)
+        for f in files:
+            name = str(f.get("name", ""))
+            if name.endswith((".zip", ".mp3")):
+                print("MIRROR_FILE", name, f.get("size"), f.get("md5"), flush=True)
+                if len(name) > 100:
+                    break
+    except Exception as exc:
+        print("MIRROR_PROBE_ERROR", repr(exc), flush=True)
+
 if __name__ == "__main__":
     main()
