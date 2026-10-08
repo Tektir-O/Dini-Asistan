@@ -11,8 +11,8 @@ Uygulama şu özellikleri hedefleyen gerçek Android kaynak kodunu içerir:
 - 114 sure ve 30 cüz listesi
 - Sure numarası + ayet numarasıyla ilgili sayfayı açma
 - Kaldığın sayfayı ve yer imini cihazda hatırlama
-- Erkek / bayan okuyucu seçim arayüzü (henüz ses çalmıyor)
-- Türkçe Meal ekranı (mealler doğrulanana kadar bilgilendirme gösterir)
+- Tek Arapça okuyucu: Ali el-Huzeyfi (Hafs); resmî ses arşivi hazırlandığında dinleme açılacak
+- Tek Türkçe meal hedefi: QuranEnc, Rowad Tercüme Merkezi (v1.0.4); lisans koşulları doğrulanmıştır, henüz içerik derlemesi yapılmadı
 
 ## APK
 
@@ -28,10 +28,10 @@ Yerel derleme adımları:
 
 ## Önemli
 
-Bu bir ilk geliştirme sürümüdür. Yedi Arapça okuyucunun tam sesleri, beş mealin gerçek metin ve sayfaları, kadın/erkek Türkçe seslendirmeler, ayet dokunma/kelime takibi, zamanlayıcı ve TikTok için MP4 paylaşımı henüz kodlanmadı. Çalışmayan özellikler kullanıcıya çalışıyormuş gibi gösterilmez.
+Bu bir ilk geliştirme sürümüdür. Bir resmî okuyucunun tam ses paketi, tek Türkçe mealin çevrimdışı içeriği, ayet dokunma/kelime takibi, zamanlayıcı ve TikTok için MP4 paylaşımı henüz eklenmedi. Çalışmayan özellikler kullanıcıya çalışıyormuş gibi gösterilmez.
 
 Mushaf görselleri: sufone/medina-mushaf, png-d150 dizini.
 Sure/ayet/sayfa verisi: quran-center/quran-meta v7.0.0 (Hafs).
 Üçüncü taraf görsel, meal ve seslerin dağıtım izni yayından önce ayrıca doğrulanmalıdır.
 
-Hedef: Kullanıcı için tek kurulum, tamamen çevrimdışı kullanım. Önce küçük prototipler gerçek Android cihazlarda doğrulanacak; tam paket yalnızca zorunlu 7 Arapça okuyucu ve 5 mealin bütünlüğü kesinleştiğinde yayımlanacaktır.
+Hedef: Kullanıcı için tek kurulum, tamamen çevrimdışı kullanım. Önce bir okuyucu + bir meal + 604 sayfalık Mushafın eksiksizliği ve paylaşım izinleri doğrulanacak. Kaynaklar ve kullanım sınırları için CONTENT_RIGHTS.md dosyasına bakın.
