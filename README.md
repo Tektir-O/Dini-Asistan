@@ -1,15 +1,21 @@
-# Dini Asistan — çevrimdışı Kur'an uygulaması
+# Dini Asistan — internetsiz Kur'an uygulaması
 
-Bu depo, internetsiz çalışan bir Android Kur'an uygulaması için yeniden başlatılmıştır.
+Bu GitHub deposu, internetsiz çalışan Android APK için yeniden başlatıldı.
 
-## İçerikler
+## Hedef
+- Medine Mushafı (Hafs): **604 matbu sayfa**.
+- Mahir el-Muaykılî tilaveti (Hafs): **114 tam sure**.
+- Uygulama ilk açılışından itibaren **internetsiz** çalışacak. Sonradan içerik indirmeyecek.
 
-- **Mushaf:** Medine Mushafı, Hafs rivayeti. 604 Kur'an sayfası hedefleniyor.
-- **Tilavet:** Mahir el-Muaykılî, Hafs rivayeti. 114 surenin tamamı hedefleniyor.
-- **İnternet:** Nihai APK kurulduktan sonra hiçbir kaynak indirmeyecek. Sesler ve sayfalar APK'ya gömülecek.
+## Kaynak indirme
+[GitHub Actions kaynak hazırlama işlemi](https://github.com/Tektir-O/Dini-Asistan/actions/workflows/prepare-offline-sources.yml)
 
-**Durum:** İndirilen dosyalar doğrulanmadan "tamamlandı" denmez. Büyük dosyalar Git tarihine değil, GitHub Actions çıktısına (başarılıysa Releases) eklenir.
+İndirme `.github/workflows/prepare-offline-sources.yml` ile çalışır. Mushaf PDF'si ayrı; 114 sure üç grupta indirilir, her MP3 doğrulanır ve APK'ya uygun Ogg Opus ses biçimine çevrilir. Eksik sure varsa işlem başarısız sayılır. Kontrolden geçen dosyalar Actions artifact ve GitHub Releases bölümüne kaynak paketi olarak çıkarılır.
 
-**İndirme:** `.github/workflows/prepare-offline-sources.yml` çalışması mushaf PDF'si ve resmî tilavet arşivini indirip kontrol eder. PDF'nin matbu 604 sayfa dışındaki kapak/ek sayfaları ayrıştırılmadan APK'ya gömülmez. Ses arşivinde tam 114 MP3 doğrulanır.
+**Kaynak ve haklar:** Resmî Kur'an Basım Kompleksi ses sunucusu erişilemediğinden Haramain Recordings tarafından yüklenmiş, Kral Fehd Kompleksi kayıtları olarak tanıtılmış [Internet Archive aynası](https://archive.org/details/HaramainMaahir) kullanılıyor. Bu aynanın resmî izinli nüshayla tam aynılığı **bağımsız olarak henüz doğrulanmadı**. APK'yı halka dağıtmadan önce doğrulanması gerekir.
+
+**Mushaf kaynağı:** 640 PDF sayfalı ham baskı; bunun içindeki gerçek 604 mushaf sayfası **henüz ayrıştırılıp doğrulanmadı**. 640 sayfalı PDF ile 604 matbu sayfa aynı değildir.
+
+**Durum:** Bu yalnızca kaynak dosyalarının indirilmesi ve kontrol edilmesi işidir; APK henüz oluşturulmadı.
 
 Ayrıntılar: [assets/README.md](assets/README.md).
