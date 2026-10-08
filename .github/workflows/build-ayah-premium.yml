@@ -7,6 +7,10 @@ on:
     paths:
       - ".github/workflows/build-ayah-premium.yml"
 
+concurrency:
+  group: premium-ayah-final-debug
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -112,15 +116,21 @@ jobs:
           script: |
             set -e
             adb install -r app-test/DiniAsistan-Premium-AyetAyet-Debug.apk
-            adb shell am start -n com.dini.asistan.offline/com.dini.asistan.MainActivity
-            sleep 5
+            adb shell am start -n com.dini.asistan.offline/com.dini.asistan.MainActivity --ez dini_internal_playback_test true
+            sleep 8
             adb shell dumpsys activity activities | grep 'com.dini.asistan.offline'
-            adb shell input tap 415 1700
-            sleep 3
             adb shell uiautomator dump /sdcard/window.xml
             adb pull /sdcard/window.xml screen.xml
-            grep 'Mushaf İndir' screen.xml
-            grep 'Tilavet İndir' screen.xml
-            grep 'Meal İndir' screen.xml
-            grep 'Video Oluştur' screen.xml
-            echo 'PREMIUM APK INSTALL, LAUNCH, AND DISABLED ACTIONS CHECKED'
+            python - <<'PY'
+            import xml.etree.ElementTree as ET
+            root=ET.parse('screen.xml').getroot()
+            nodes=list(root.iter('node'))
+            for text in ('Mushaf İndir','Tilavet İndir','Meal İndir','Video Oluştur'):
+                matching=[n for n in nodes if text in n.attrib.get('text','')]
+                assert matching, 'Missing button: '+text
+                assert all(n.attrib.get('enabled')=='false' for n in matching), 'Active forbidden button: '+text
+            assert any('Okunan ayet:' in n.attrib.get('text','') for n in nodes), 'No real verse playback label on screen'
+            assert any('Sayfa' in n.attrib.get('text','') and '/ 604' in n.attrib.get('text','') for n in nodes), 'Mushaf page missing'
+            print('PASS four disabled buttons, 604-page display and active verse player')
+            PY
+            echo 'PREMIUM APK INSTALLED, LAUNCHED, AND AYAH PLAYBACK UI VERIFIED'
