@@ -1,8 +1,8 @@
 # Tek APK — sesler ve mushaf gömülü geliştirme paketi (8 Ekim 2026)
 
-**[Gömülü 604 görsel sayfa + 114 sure içeren APK indir (GitHub Actions)](https://github.com/Tektir-O/Dini-Asistan/actions/runs/37783934083/artifacts/11553756344)**
+**[Gömülü 604 görsel sayfa + 114 sure içeren APK indir (GitHub Actions)](https://github.com/Tektir-O/Dini-Asistan/actions/runs/37789860388/artifacts/11556237925)**
 
-GitHub Actions derlemesi başarıyla tamamlandı. APK içinde 604 numaralı WebP sayfası, Mahir el-Muaykılî'nin 114 adet Ogg Opus ses dosyası ve internet izni bulunmadığı **teknik olarak** doğrulandı. Tamamı uygulamanın içine gömülü, uygulama açıldıktan sonra ağdan indirme yok. Android'de fiziksel telefonla kurulum/oynatma testi henüz yapılmadı.
+GitHub Actions v0.2.0 düzeltme derlemesi başarıyla tamamlandı. Mushaf sağdan sola gezinir: sola kaydır veya soldaki İleri Sayfa düğmesine basınca sayfa numarası artar, sağa kaydır veya sağdaki Geri Sayfa düğmesine basınca azalır. 604 sayfanın süslemeli yazı çerçevesi, metni kırpmadan yatay olarak hizalandı. APK içinde 604 numaralı WebP sayfası, Mahir el-Muaykılî'nin 114 adet Ogg Opus ses dosyası ve internet izni bulunmadığı **teknik olarak** doğrulandı. Tamamı uygulamanın içine gömülü, uygulama açıldıktan sonra ağdan indirme yok. Android'de fiziksel telefonla kurulum/oynatma testi henüz yapılmadı.
 
 **Bu, yayın hakları ve sayfa bazlı tilavet açısından nihai sürüm değildir.**
 
