@@ -1,0 +1,120 @@
+name: Dini Asistan - Kucuk Tek Offline APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build-compact-single-apk.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  compact-build:
+    name: Kompakt tek APK - 604 mushaf ve 114 tam sure
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Android SDK paketleri
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Ses ve PDF isleme kutuphaneleri
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          python -m pip install --no-cache-dir PyMuPDF Pillow
+      - name: Kaynak 114 ses ve PDF paketini indir
+        run: |
+          mkdir -p archive
+          gh run download 37764358206 --repo "$GITHUB_REPOSITORY" --name verified-quran-offline-source-package --dir archive
+          unzip -q archive/offline-quran-hafs-maher-sources.zip
+          test -s offline-sources/SOURCE-MANIFEST.json
+          rm -rf archive
+      - name: Tek APK icin daha kucuk sesler ve hizali 604 Mushaf sayfasi olustur
+        run: |
+          python scripts/test_mushaf_alignment.py
+          python scripts/pack_compact_offline_apk.py
+          python scripts/validate_page_cues.py
+          test "$(find app/src/main/assets/mushaf -name '*.webp' | wc -l)" -eq 604
+          test "$(find app/src/main/assets/audio/surah -name '*.opus' | wc -l)" -eq 114
+          rm -rf offline-sources
+          du -sh app/src/main/assets
+      - name: Farkli paket kimligiyle onceki imza cakismasini onle
+        run: |
+          sed -i 's/applicationId = "com.dini.asistan"/applicationId = "com.dini.asistan.offline"/' app/build.gradle.kts
+          sed -i 's/versionCode = 2/versionCode = 3/' app/build.gradle.kts
+          sed -i 's/versionName = "0.2.0"/versionName = "0.3.0"/' app/build.gradle.kts
+          grep 'applicationId\|versionName' app/build.gradle.kts
+      - name: Kotlin testleri ve Debug APK olustur
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: Kurulabilir tek dosya ve internet izni yok testi
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          cp app/build/outputs/apk/debug/app-debug.apk output/DiniAsistan-Offline-Debug-v0.3.apk
+          apk=output/DiniAsistan-Offline-Debug-v0.3.apk
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" > output/permissions.txt
+          if grep -q 'android.permission.INTERNET' output/permissions.txt; then
+            echo "::error::Offline app must not request internet";exit 1
+          fi
+          unzip -tq "$apk" | tail -1
+          unzip -Z1 "$apk" > output/list.txt
+          test "$(grep -Ec '^assets/mushaf/[0-9]{3}\.webp$' output/list.txt)" -eq 604
+          test "$(grep -Ec '^assets/audio/surah/[0-9]{3}\.opus$' output/list.txt)" -eq 114
+          sha256sum "$apk" > output/sha256.txt
+          stat -c '%n %s bytes' "$apk"
+          if test "$(stat -c %s "$apk")" -ge 520000000; then
+            echo "::error::Compact APK still too big for direct connector export";exit 1
+          fi
+          echo "PASS: single signed APK, 604 pages, 114 surahs, no internet permission"
+      - name: APK yi GitHub'a kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: dini-asistan-tek-kucuk-apk
+          path: output/DiniAsistan-Offline-Debug-v0.3.apk
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
+  emulator-test:
+    needs: compact-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dini-asistan-tek-kucuk-apk
+          path: install-test
+      - name: Android emulatorunde gercek paket kurulumunu dene
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disk-size: 4096M
+          heap-size: 512M
+          ram-size: 3072M
+          script: |
+            adb install -r install-test/DiniAsistan-Offline-Debug-v0.3.apk
+            adb shell am start -n com.dini.asistan.offline/com.dini.asistan.MainActivity
+            sleep 5
+            adb shell dumpsys activity activities | grep 'com.dini.asistan.offline'
+            echo "EMULATOR APK INSTALL AND LAUNCH PASSED"
