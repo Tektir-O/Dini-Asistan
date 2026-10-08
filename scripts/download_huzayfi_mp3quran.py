@@ -70,8 +70,12 @@ def download(number):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sample",action="store_true")
+    parser.add_argument("--start",type=int,default=1)
+    parser.add_argument("--end",type=int,default=114)
     args = parser.parse_args()
-    chosen = [1,112,113,114] if args.sample else list(range(1,115))
+    if args.start < 1 or args.end > 114 or args.start > args.end:
+        raise SystemExit("Invalid surah range")
+    chosen = [1,112,113,114] if args.sample else list(range(args.start,args.end+1))
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         records = list(pool.map(download,chosen))
     records.sort(key=lambda r:r["surah"])
@@ -97,13 +101,16 @@ def main():
        "olarak etiketlenmez. Saglayicinin kaynak bilgisini koruyunuz.\n"+
        "Her sure icin dosya uzunlugu ve SHA256 manifest.json icinde bulunur.\n",
        encoding="utf-8")
-    archive = Path("dist")/("Ali-el-Huzeyfi-Hafs-ORNEK-4-Sure.zip" if args.sample else "Ali-el-Huzeyfi-Hafs-114-Sure-MP3.zip")
+    archive_name = ("Ali-el-Huzeyfi-Hafs-ORNEK-4-Sure.zip" if args.sample else
+      "Ali-el-Huzeyfi-Hafs-114-Sure-MP3.zip" if (args.start==1 and args.end==114) else
+      f"Ali-el-Huzeyfi-Hafs-{args.start:03d}-{args.end:03d}.zip")
+    archive = Path("dist")/archive_name
     with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_STORED,allowZip64=True) as z:
         for file in sorted(ROOT.iterdir()):
             z.write(file,arcname=file.name)
     print("RESULT",archive,"surahs",len(records),"size",archive.stat().st_size,
           "bytes","sha256",checksum(archive),flush=True)
-    if not args.sample and len(records) != 114:
-        raise SystemExit("ERROR: Not all 114 surahs.")
+    if not args.sample and len(records) != args.end-args.start+1:
+        raise SystemExit("ERROR: Missing surahs in requested range.")
 if __name__ == "__main__":
     main()
