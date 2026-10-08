@@ -20,6 +20,6 @@ Kapsamlı ses/PDF test raporu: [114 sure ve mushaf teknik doğrulaması](https:/
 
 **Mushaf kaynağı:** 640 PDF sayfalı ham baskı; bunun içindeki gerçek 604 mushaf sayfası **henüz ayrıştırılıp doğrulanmadı**. 640 sayfalı PDF ile 604 matbu sayfa aynı değildir.
 
-**Durum:** 8 Ekim 2026 tarihinde tam 604 görsel sayfası ve 114 surenin sesini tek bir internetsiz Android geliştirme APK'sında paketleyen derleme başarıyla tamamlandı. **Sayfaya özel ses zamanları ve resmî yayın izni eşleşmesi henüz tamamlanmadı.** APK: [GitHub Actions indirme](https://github.com/Tektir-O/Dini-Asistan/actions/runs/37783934083/artifacts/11553756344). Ayrıntılar: [ANDROID_README.md](ANDROID_README.md).
+**Durum:** 8 Ekim 2026 tarihinde tam 604 görsel sayfası ve 114 surenin sesini tek bir internetsiz Android geliştirme APK'sında paketleyen derleme başarıyla tamamlandı. **Sayfaya özel ses zamanları ve resmî yayın izni eşleşmesi henüz tamamlanmadı.** APK: [GitHub Actions indirme](https://github.com/Tektir-O/Dini-Asistan/actions/runs/37789860388/artifacts/11556237925). Ayrıntılar: [ANDROID_README.md](ANDROID_README.md).
 
 Ayrıntılar: [assets/README.md](assets/README.md).
