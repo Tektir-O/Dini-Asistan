@@ -590,6 +590,12 @@ public class MainActivity extends Activity {
                 new LinearLayout.LayoutParams(0,dp(50),1));
             content.addView(pages);
             space(content,10);
+            boolean read=prefs.getBoolean("hatim_page_"+page,false);
+            content.addView(button(read?"✓  Bu sayfa okundu (işareti kaldır)"
+                :"✓  Bu sayfayı okudum",this::toggleHatimPage,read));
+            space(content,8);
+            content.addView(label("Hatim takibi: "+completedPages()+" / 604 sayfa",12,MUTE,false));
+            space(content,10);
             tilavetControls(content);
             space(content,10);
             content.addView(label("Mushafı iki parmakla yakınlaştırabilirsiniz.",12,MUTE,false));
@@ -838,12 +844,73 @@ public class MainActivity extends Activity {
                     .setPositiveButton("Kapat",null).show();
             }).show();
     }
+
+    private int completedPages(){
+        int count=0;
+        for(int n=1;n<=604;n++)if(prefs.getBoolean("hatim_page_"+n,false))count++;
+        return count;
+    }
     private void hatimStatus() {
+        final int finished=completedPages();
+        final float percent=(100f*finished)/604f;
         new AlertDialog.Builder(this).setTitle("Hatim Takibi")
-            .setMessage("Son açtığınız Mushaf sayfası: "+page+" / 604.\n\n"+
-                "Bu kayıt tamamlanan sayfaları ayrı ayrı doğrulamaz. "+
-                "Ayrıntılı hatim takibi hazırlanıyor.")
+            .setMessage("Okundu diye işaretlediğiniz: "+finished+" / 604 sayfa\n"+
+                "İlerleme: "+String.format(Locale.forLanguageTag("tr-TR"),"%.1f",percent)+"%\n"+
+                "Son açtığınız sayfa: "+page+"\n\n"+
+                "Sayfaları okuduğunuzda Mushaf ekranından işaretleyebilirsiniz.")
             .setPositiveButton("Mushafı Aç",(d,w)->tab(8))
+            .setNeutralButton("Hatimi Sıfırla",(d,w)->new AlertDialog.Builder(this)
+                .setTitle("Hatim kaydı sıfırlansın mı?")
+                .setMessage("604 sayfalık okundu işaretleri silinir. Mushaf ve meal silinmez.")
+                .setPositiveButton("Sıfırla",(dialog,which)->{
+                    SharedPreferences.Editor editor=prefs.edit();
+                    for(int n=1;n<=604;n++)editor.remove("hatim_page_"+n);
+                    editor.apply();
+                    toast("Hatim kaydı sıfırlandı.");
+                    render();
+                }).setNegativeButton("Vazgeç",null).show())
+            .setNegativeButton("Kapat",null).show();
+    }
+    private void toggleHatimPage(){
+        String key="hatim_page_"+page;
+        boolean value=!prefs.getBoolean(key,false);
+        prefs.edit().putBoolean(key,value).apply();
+        toast(value?"Sayfa okundu olarak kaydedildi.":"Okundu işareti kaldırıldı.");
+        render();
+    }
+    private void ezberStatus() {
+        if(index==null){toast("Sure listesi bulunamadı.");return;}
+        try{
+            JSONArray names=index.getJSONArray("surahs");
+            final String[] surahs=new String[names.length()];
+            final boolean[] memorized=new boolean[names.length()];
+            for(int i=0;i<names.length();i++){
+                surahs[i]=(i+1)+". "+names.getJSONObject(i).optString("name","Sure");
+                memorized[i]=prefs.getBoolean("ezber_surah_"+(i+1),false);
+            }
+            new AlertDialog.Builder(this).setTitle("Ezber Takibi")
+                .setMultiChoiceItems(surahs,memorized,(dialog,which,isChecked)->{
+                    prefs.edit().putBoolean("ezber_surah_"+(which+1),isChecked).apply();
+                })
+                .setPositiveButton("Kaydet",(d,w)->toast("Ezber işaretleri kaydedildi."))
+                .setNegativeButton("Kapat",null).show();
+        }catch(Exception ex){toast("Ezber listesi açılamadı.");}
+    }
+    private void tecvidGuide(){
+        final String[] topics={"Med (uzatma)","Gunne (geniz sesi)","İzhar (açık okuma)",
+            "İdgam (birleştirme)","İhfa (gizleme)","İklab (dönüştürme)"};
+        final String[] explanations={
+            "Uzun okuma kurallarıdır. Uzatma süresi med türüne göre değişir.",
+            "Bazı harf ve hükümler sırasında genizden gelen sestir.",
+            "İlgili harfleri açıkça, birbirine katmadan okumaktır.",
+            "Belirli harflerin karşılaşmasında bir harfi diğerine katma hükmüdür.",
+            "Bazı harflerde sesin açık okuma ile idgam arasında tutulmasıdır.",
+            "Sakin nun veya tenvinden sonra be harfi geldiğinde uygulanan hükümdür."};
+        new AlertDialog.Builder(this).setTitle("Tecvid Konuları")
+            .setItems(topics,(d,which)->new AlertDialog.Builder(this)
+                .setTitle(topics[which]).setMessage(explanations[which]+
+                    "\n\nBu kısa açıklama tecvid eğitiminin yerine geçmez.")
+                .setPositiveButton("Kapat",null).show())
             .setNegativeButton("Kapat",null).show();
     }
     private void feature(LinearLayout row,String icon,String name,String description,
@@ -882,13 +949,13 @@ public class MainActivity extends Activity {
             "Nüzul Sırası","Secde Ayetleri","Kur’an Fihristi",
             "Kelime Meali","Kıraatler","Tefsir","Ayarlar"};
         String[] details={"Sure ve ayet bul","Erkek & Bayan","Okuma kuralları",
-            "Ayet ezberleme","Son okunan sayfa","İniş sıralaması",
+            "Ezber takip listesi","Okunan sayfalar","İniş sıralaması",
             "Tilavet secdesi","Konulara göre ayet","Kelime anlamları",
             "Farklı okuyuşlar","Ayet açıklamaları","Uygulama ayarları"};
-        boolean[] ready={true,true,false,false,true,false,false,false,false,false,false,true};
+        boolean[] ready={true,true,true,true,true,false,false,false,false,false,false,true};
         Runnable[] actions={
-            this::searchAyah,this::readerPicker,()->notReady("Tecvid"),
-            ()->notReady("Ezber"),this::hatimStatus,
+            this::searchAyah,this::readerPicker,this::tecvidGuide,
+            this::ezberStatus,this::hatimStatus,
             ()->notReady("Nüzul Sırası"),()->notReady("Secde Ayetleri"),
             ()->notReady("Kur’an Fihristi"),()->notReady("Kelime Meali"),
             ()->notReady("Kıraatler"),()->notReady("Tefsir"),
