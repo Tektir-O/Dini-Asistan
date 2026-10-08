@@ -1,23 +1,26 @@
-# Mushaf ve tilavet veri kaynakları
+# Mushaf ve tilavet kaynakları, lisans ve doğrulama
 
-## Mushaf (Hafs)
-Yayıncı: **Kral Fehd Kur'an Basım Kompleksi**.
-Resmî dijital portal: https://dm.qurancomplex.gov.sa/
-Kullanım koşulları: https://dm.qurancomplex.gov.sa/copyright/
-Yayıncıya atfedilen 1441 baskısının 62 MB PDF aynası:
-https://archive.org/download/MushafMadinaHafsGreen1441/MushafMadinaHafsGreen1441.pdf
+## Mushaf
+- Yayıncı olarak belirtilen kurum: **Kral Fehd Kur'an Basım Kompleksi**.
+- Resmî dijital mushaf: https://dm.qurancomplex.gov.sa/
+- Resmî kullanım koşulları: https://dm.qurancomplex.gov.sa/rights/
+- 1441H, Hafs PDF aynası: https://archive.org/download/MushafMadinaHafsGreen1441/MushafMadinaHafsGreen1441.pdf
 
-**Önemli:** Archive.org'un listesine göre bu PDF 640 sayfalıdır; kapak ve son ekler dahil olabilir. Bu dosyanın tamamının 604 mushaf sayfası olduğu iddia edilmez. APK'da kullanılacak 604 sayfa, matbu sayfa numaraları karşılaştırılarak ayrı doğrulanmalıdır.
+**PDF'nin 640 sayfası var.** Matbu mushafın 604 sayfasını tek tek doğrulayıp ayırmadan APK'da 604 sayfa tamamlandı denmeyecek.
 
-## Ses (Hafs)
-Yayıncı: **Kral Fehd Kur'an Basım Kompleksi**.
-Resmî kullanım izni: https://qc-dev.qurancomplex.gov.sa/quran-audios/
-Resmî Hafs tilavet arşivi: https://qurancomplex.gov.sa/category/kfgqpc-quran-audio/recite/hafs/
-Hafız: **Mahir el-Muaykılî**. Arşiv, tam sure indirmesini yaklaşık **1,23 GB** olarak duyurur.
+## Ses / tam sure
+- Hafız: **Mahir el-Muaykılî**, Hafs.
+- Kurumun ücretsiz kullanım izni açıklaması: https://qc-dev.qurancomplex.gov.sa/quran-audios/
+- Resmî Hafs arşivi: https://qurancomplex.gov.sa/category/moratal/hafs/
+- Resmî siteye bağlantı zaman aşımından dolayı kullanılan alternatif kaynak: https://archive.org/details/HaramainMaahir
+- Aynanın yükleyicisi **Haramain Recordings**, açıklamasında bunları **King Fahd Qur'an Complex Recording** olarak tanımlıyor. Bu bilgi yükleyici beyanıdır; resmî ses dosyalarıyla birebir özdeşliği şu an kesinleşmiş değildir.
+- 001.mp3 ile 114.mp3 arasındaki 114 tam sure indirilir; süre ve dosya boyu doğrulanır, sonra APK'da az yer kaplaması için 64 kbps tek kanal Ogg Opus biçimine dönüştürülür. Tilavetin hiçbir suresi atlanmaz.
 
-Resmî izin açıklamasına göre belirtilen ses nüshaları, bilgisayar uygulamaları ve internet yayınlarında ücretsiz kullanılabilir. Bu izin **kayıtların mülkiyetinin projeye devri anlamına gelmez**.
+**Yayın hakkı:** Kurum kendi sayfasında listelenen kayıtların ücretsiz uygulama ve medya kullanımına izin veriyor. Başka bir kişinin yüklediği kopyanın aynı izinli kayıt olduğundan emin olmadan APK'yı halka dağıtma kararı alınmamalıdır. Bu hak kayıt sahipliğinin geliştiriciye devri anlamına gelmez.
 
-## Paketleme
-- Kaynak arşivler Git deposuna commit edilmez; büyük dosyalar için GitHub Releases/Actions kullanılır.
-- Uygulama için sayfaların tam **604**, ses dosyalarının tam **114** olarak ayrıca doğrulanması gerekir.
-- Bu depodaki otomatik indirme, nihai APK'nın hazır olduğu anlamına gelmez.
+## Teknik
+- `scripts/download_mirror.py`: doğrulamalı indirici.
+- `.github/workflows/prepare-offline-sources.yml`: otomatik kaynak hazırlama işlemi.
+- SHA-256 listesi: başarılı işin `SOURCE-MANIFEST.json` dosyası.
+- Dosyalar Git geçmişine commit edilmez; GitHub Actions ve başarılıysa Releases kaynak paketinde durur.
+- Bu dosyalar henüz uygulamaya gömülmedi. APK ayrıca hazırlanıp uçak modunda test edilecektir.
