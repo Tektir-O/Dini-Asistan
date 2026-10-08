@@ -1,9 +1,0 @@
-.gradle/
-.idea/
-build/
-app/build/
-local.properties
-node_modules/
-app/src/main/assets/quran-index.json
-app/src/main/assets/mushaf/
-*.iml
