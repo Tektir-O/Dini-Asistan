@@ -1,3 +1,21 @@
+# Tek APK — sesler ve mushaf gömülü geliştirme paketi (8 Ekim 2026)
+
+**[Gömülü 604 görsel sayfa + 114 sure içeren APK indir (GitHub Actions)](https://github.com/Tektir-O/Dini-Asistan/actions/runs/37783934083/artifacts/11553756344)**
+
+GitHub Actions derlemesi başarıyla tamamlandı. APK içinde 604 numaralı WebP sayfası, Mahir el-Muaykılî'nin 114 adet Ogg Opus ses dosyası ve internet izni bulunmadığı **teknik olarak** doğrulandı. Tamamı uygulamanın içine gömülü, uygulama açıldıktan sonra ağdan indirme yok. Android'de fiziksel telefonla kurulum/oynatma testi henüz yapılmadı.
+
+**Bu, yayın hakları ve sayfa bazlı tilavet açısından nihai sürüm değildir.**
+
+- Mushaf görselleri, 640 sayfalık 1441H kaynak PDF'nin **4–607** PDF sayfalarından 604 WebP olarak türetilmiştir. İlk ve son basılı sayfa eşleşmesi ayrıca görsel ve içerik denetimi gerektirir.
+- 114 surenin sesleri tam kayıttır ve **Tilavet** ekranından çevrimdışı oynatılabilir.
+- Mushaf sayfasındaki **Başlat** düğmesi, o sayfaya karşılık gelen **doğrulanmış ses zaman aralıkları eksikse** çalmayı reddeder. Sure kaydından tahmini bölüm kesmez. Bu nedenle **tek sayfayı tam okuma işlevi henüz tamamlanmadı**.
+- Kral Fehd Kompleksi resmî ses kayıtlarına ücretsiz uygulama kullanım izni veriyor; kullanılan **Haramain/Internet Archive aynasındaki dosyaların o resmî kayıtlarla birebir aynı olduğu henüz doğrulanmadı**. Üçüncü taraf aynadaki sesler için yeniden dağıtım/yayın hakkı kesinleşmeden APK'nın halka açık yayınında hak iddia edilmemelidir.
+- Bu APK **debug imzalı bir test sürümüdür**, imzalı mağaza sürümü değildir.
+
+**Kurulum:** GitHub Actions bağlantısındaki ZIP dosyasını indir, ZIP içindeki `app-debug.apk` dosyasını Android telefona çıkar ve kur. Büyük APK için cihazında birkaç GB boş alan bırak. GitHub oturum açman gerekebilir.
+
+---
+
 # Dini Asistan — Android uygulaması
 
 ## İlk sürümün hazır işlevleri
@@ -13,7 +31,7 @@
 
 ## Önemli: içerik henüz gömülmedi
 
-Bu ilk derlenebilir Android **altyapısıdır**, nihai tam APK **değildir**. Ses ve görüntülerin hepsinin dosyaları doğrulama aşamasında; büyük arşiv GitHub Actions Artifacts içinde saklanır. UI'daki sayfaları ve sesleri etkinleştirmek için yayın hakkı ve sayfa eşleştirmesi doğrulanmış dosyalar gerekir.
+Gömülü APK'da 604 görsel sayfa ve 114 sure bulunuyor. Ancak mushaf sayfa indeksinin görsel denetimi, sayfaya özel ses başlangıç/bitiş zamanları ve yayın haklarının resmî kaynakla birebir eşleştirilmesi henüz tamamlanmadı.
 
 Dosya düzeni:
 
