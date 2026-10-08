@@ -1,0 +1,93 @@
+name: Dini Asistanim Tam Cevrimdisi Arapca Tilavet APK
+on:
+  push:
+    paths:
+      - '.github/workflows/arabic-tilavet-apk.yml'
+      - 'scripts/bundle_huzayfi_mp3quran.py'
+      - 'scripts/download_huzayfi_mp3quran.py'
+      - 'scripts/verify_huzayfi_audio.py'
+      - 'app/src/main/java/com/diniasistanim/app/MainActivity.java'
+      - 'app/src/main/java/com/diniasistanim/app/TilavetPlayer.java'
+  workflow_dispatch:
+
+jobs:
+  full-offline-tilavet:
+    name: 114 Sure + Mushaf + Meal / Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Audio codecs
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -hide_banner -encoders | grep -q libopus
+      - name: Generate Quran index
+        run: |
+          npm install --no-audit --no-fund --no-package-lock
+          npm run generate:index
+      - name: Download offline Turkish meal
+        run: node scripts/prepare_meal.mjs
+      - name: Download 604 Mushaf pages
+        run: bash scripts/prepare_mushaf.sh
+      - name: Verify Mushaf and meal
+        run: |
+          test "$(find app/src/main/assets/mushaf/pages -name '*.png' | wc -l)" -eq 604
+          test "$(wc -l < app/src/main/assets/mushaf/page-sha256.txt)" -eq 604
+          (cd app/src/main/assets/mushaf/pages && sha256sum -c ../page-sha256.txt >/dev/null)
+          test -s app/src/main/assets/meal-rowad.json
+      - name: Download, compress and verify ALL 114 Arabic Hafs recordings
+        run: |
+          python3 -u scripts/bundle_huzayfi_mp3quran.py
+          python3 scripts/verify_huzayfi_audio.py
+      - name: Build APK with real offline audio
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+      - name: Check all 114 audio files actually present inside APK
+        run: |
+          python3 - <<'PY'
+          import json,zipfile,hashlib
+          apk='app/build/outputs/apk/debug/app-debug.apk'
+          with zipfile.ZipFile(apk) as z:
+              manifest=json.loads(z.read('assets/audio-ar/huzayfi-hafs/manifest.json'))
+              assert manifest['recording_count']==114
+              assert len(manifest['recordings'])==114
+              for n in range(1,115):
+                  entry=f'assets/audio-ar/huzayfi-hafs/{n:03}.ogg'
+                  assert entry in z.namelist(),f'Absent in APK: {entry}'
+                  got=hashlib.sha256(z.read(entry)).hexdigest()
+                  assert got==manifest['recordings'][n-1]['bundle_sha256'],f'Mismatch {n}'
+              print('APK VERIFICATION SUCCESS: 114/114 playable Ogg-Opus audio tracks, SHA256 matched')
+          PY
+      - name: Save APK SHA-256
+        run: |
+          sha256sum app/build/outputs/apk/debug/app-debug.apk > Dini-Asistanim-APK-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk Dini-Asistanim-Tam-Huzeyfi-Hafs.apk
+          du -h Dini-Asistanim-Tam-Huzeyfi-Hafs.apk
+      - name: Deliver offline Hafs APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dini-Asistanim-Tam-Huzeyfi-Hafs-APK
+          path: |
+            Dini-Asistanim-Tam-Huzeyfi-Hafs.apk
+            Dini-Asistanim-APK-SHA256.txt
+            app/src/main/assets/audio-ar/huzayfi-hafs/manifest.json
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
