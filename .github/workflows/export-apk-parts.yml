@@ -1,0 +1,62 @@
+name: Dini Asistan APK parcalari (sohbete tek APK aktarimi)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/export-apk-parts.yml"]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  export-parts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Son tam APK paketini indir
+        run: |
+          mkdir -p input
+          gh run download 37789860388 --repo "$GITHUB_REPOSITORY" --name dini-asistan-cevrimdisi-604-sayfa-114-sure-apk --dir input
+          find input -type f -printf '%p %s bytes\n'
+          test -s input/app-debug.apk || test -s input/app/build/outputs/apk/debug/app-debug.apk
+          mkdir -p out
+          apk=$(find input -type f -name app-debug.apk | head -1)
+          cp "$apk" out/DiniAsistan-v0.2.0.apk
+          unzip -tq out/DiniAsistan-v0.2.0.apk | tail -1
+          sha256sum out/DiniAsistan-v0.2.0.apk | tee out/sha256sum.txt
+          split -b 380000000 -d -a 2 out/DiniAsistan-v0.2.0.apk out/part-
+          ls -lh out/
+          test "$(find out -maxdepth 1 -name 'part-*' | wc -l)" -eq 4
+          cat out/part-* | sha256sum > out/reconstructed.sha256
+          cmp out/sha256sum.txt out/reconstructed.sha256 || { echo 'sha256 output filename differences expected'; }
+          sha256sum out/DiniAsistan-v0.2.0.apk
+          cat out/part-* | sha256sum
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-part-00
+          path: out/part-00
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-part-01
+          path: out/part-01
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-part-02
+          path: out/part-02
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-part-03
+          path: out/part-03
+          compression-level: 0
+          retention-days: 7
