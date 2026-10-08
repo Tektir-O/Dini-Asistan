@@ -24,11 +24,11 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
-    private static final int BG=0xFF0B1B20, PANEL=0xFF183238, GOLD=0xFFD9B878, WHITE=0xFFF6F1E8, MUTE=0xFFBAC6C7;
+    private static final int BG=0xFF031B16, PANEL=0xFF0A3329, GOLD=0xFFEBC983, WHITE=0xFFFFF6E4, MUTE=0xFFC2CFBF;
     private SharedPreferences prefs;
     private JSONObject index;
     private JSONObject meal;
-    private int page=1, bookmark=0, section=0;
+    private int page=1, bookmark=0, section=8;
     private boolean arabic=true;
     private final String reader="Ali el-Huzeyfi (Hafs)";
     private TilavetPlayer tilavet;
@@ -65,8 +65,22 @@ public class MainActivity extends Activity {
     private int dp(int n) { return Math.round(n*getResources().getDisplayMetrics().density); }
     private LinearLayout column() { LinearLayout l=new LinearLayout(this); l.setOrientation(1); return l; }
     private LinearLayout row() { LinearLayout l=new LinearLayout(this); l.setOrientation(0); l.setGravity(Gravity.CENTER_VERTICAL); return l; }
+
     private GradientDrawable shape(int c) {
-        GradientDrawable d=new GradientDrawable(); d.setColor(c); d.setCornerRadius(dp(14)); return d;
+        GradientDrawable d=new GradientDrawable();
+        d.setColor(c);
+        d.setCornerRadius(dp(18));
+        d.setStroke(dp(1),0x77D5AD63);
+        return d;
+    }
+    private GradientDrawable luxury(boolean highlighted) {
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            highlighted
+                ? new int[]{0xFFEED49A,0xFFC99C4B,0xFFFAE4AC}
+                : new int[]{0xFF0F4235,0xFF05241E,0xFF031A17});
+        d.setCornerRadius(dp(20));
+        d.setStroke(dp(1),highlighted?0xFFFFF0C3:GOLD);
+        return d;
     }
     private TextView label(String value,int size,int color,boolean bold) {
         TextView v=new TextView(this); v.setText(value); v.setTextSize(size); v.setTextColor(color);
@@ -74,43 +88,102 @@ public class MainActivity extends Activity {
         if (bold) v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         return v;
     }
+
     private TextView button(String value,Runnable handler,boolean gold) {
         TextView v=label(value,14,gold?BG:WHITE,true);
-        v.setGravity(Gravity.CENTER); v.setPadding(dp(12),dp(14),dp(12),dp(14));
-        v.setBackground(shape(gold?GOLD:PANEL)); v.setOnClickListener(w->handler.run()); return v;
+        v.setGravity(Gravity.CENTER);
+        v.setPadding(dp(12),dp(14),dp(12),dp(14));
+        v.setBackground(luxury(gold));
+        v.setOnClickListener(w->handler.run());
+        return v;
     }
     private void space(LinearLayout p,int h) { p.addView(new View(this),new LinearLayout.LayoutParams(1,dp(h))); }
+
     private void item(LinearLayout list,String heading,String detail,Runnable action) {
-        LinearLayout card=column();card.setPadding(dp(18),dp(18),dp(18),dp(18));card.setBackground(shape(PANEL));
-        card.addView(label(heading,19,WHITE,true));space(card,6);card.addView(label(detail,13,MUTE,false));
-        card.setOnClickListener(v->action.run());list.addView(card);space(list,12);
+        LinearLayout card=column();
+        card.setPadding(dp(18),dp(18),dp(18),dp(18));
+        card.setBackground(luxury(false));
+        card.addView(label(heading,18,GOLD,true));
+        space(card,6);
+        card.addView(label(detail,13,MUTE,false));
+        card.setOnClickListener(v->action.run());
+        list.addView(card);
+        space(list,12);
     }
     private void tab(int choice) { section=choice; render(); }
+
     @Override public void onBackPressed() {
-        if(section==0)super.onBackPressed();
-        else if(section==1 || section==7)tab(0);
-        else if(section==8)tab(1);
-        else tab(1);
+        if(section==8)super.onBackPressed();
+        else tab(8);
+    }
+    private String currentSurahName() {
+        if(index==null)return "Kur’an-ı Kerim";
+        try{
+            JSONArray surahs=index.getJSONArray("surahs");
+            int number=surahAtPage(page);
+            return surahs.getJSONObject(number-1).optString("name","Kur’an-ı Kerim")+" Suresi";
+        }catch(Exception ignored){return "Kur’an-ı Kerim";}
+    }
+    private int currentJuz() {
+        if(index==null)return 1;
+        try{
+            JSONArray starts=index.getJSONArray("juz_pages");
+            int juz=1;
+            for(int i=0;i<starts.length();i++){
+                if(starts.getInt(i)<=page)juz=i+1;
+                else break;
+            }
+            return juz;
+        }catch(Exception ignored){return 1;}
+    }
+    private void navAction(int target) {
+        if(target==0){arabic=true;prefs.edit().putBoolean("arabic",true).apply();tab(8);}
+        else if(target==1)showSurahs();
+        else if(target==2)showJuz();
+        else if(target==3){arabic=false;prefs.edit().putBoolean("arabic",false).apply();tab(8);}
+        else if(target==4)notReady("Tefsir");
+        else tab(9);
     }
     private void render() {
         LinearLayout root=column();
         root.setBackgroundColor(BG);
-        LinearLayout top=row();
-        top.setPadding(dp(20),dp(14),dp(18),dp(14));
-        LinearLayout identity=column();
-        identity.addView(label("☪  DİNİ ASİSTANIM",22,GOLD,true));
-        space(identity,3);
-        identity.addView(label("Her gün iyiliğe bir adım",12,MUTE,false));
-        top.addView(identity,new LinearLayout.LayoutParams(0,-2,1f));
+        LinearLayout top=column();
+        top.setPadding(dp(18),dp(10),dp(18),dp(8));
+        top.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{0xFF083E31,0xFF031B16}));
+        LinearLayout bar=row();
+        TextView logo=label("☾  DİNİ ASİSTANIM",14,GOLD,true);
+        bar.addView(logo,new LinearLayout.LayoutParams(0,dp(44),1));
+        TextView search=button("⌕",this::searchAyah,false);
+        bar.addView(search,new LinearLayout.LayoutParams(dp(48),dp(44)));
+        bar.addView(new View(this),new LinearLayout.LayoutParams(dp(8),1));
         TextView settings=button("⚙",()->tab(6),false);
-        top.addView(settings,new LinearLayout.LayoutParams(dp(52),-2));
+        bar.addView(settings,new LinearLayout.LayoutParams(dp(48),dp(44)));
+        top.addView(bar);
+        TextView ornament=label("✧ ───────── ۞ ───────── ✧",12,GOLD,false);
+        ornament.setGravity(Gravity.CENTER);
+        top.addView(ornament);
+        space(top,5);
+        String title=section==8?(arabic?currentSurahName():"Türkçe Meal"):
+            section==9?"Diğer Özellikler":section==6?"Ayarlar":
+            section==2?"Kur’an-ı Kerim":section==0?"Dini Asistanım":"Kur’an ve İbadet";
+        TextView titleLabel=label(title,27,GOLD,true);
+        titleLabel.setTypeface(Typeface.SERIF,Typeface.BOLD);
+        titleLabel.setGravity(Gravity.CENTER);
+        top.addView(titleLabel);
+        String subtitle=section==8?currentJuz()+". Cüz  •  Sayfa "+page+" / 604":
+            section==9?"Kur’an ile ilgili tüm bölümler":"Zümrüt ve altın koleksiyonu";
+        TextView subtitleLabel=label(subtitle,13,WHITE,false);
+        subtitleLabel.setGravity(Gravity.CENTER);
+        top.addView(subtitleLabel);
+        space(top,8);
         root.addView(top);
 
         ScrollView scroller=new ScrollView(this);
         scroller.setFillViewport(true);
         scroller.setClipToPadding(false);
         LinearLayout area=column();
-        area.setPadding(dp(16),dp(12),dp(16),dp(26));
+        area.setPadding(dp(13),dp(8),dp(13),dp(20));
         scroller.addView(area);
         root.addView(scroller,new LinearLayout.LayoutParams(-1,0,1f));
         if(section==0)home(area);
@@ -122,19 +195,27 @@ public class MainActivity extends Activity {
         else if(section==6)settings(area);
         else if(section==7)myBook(area);
         else if(section==8)mushafReader(area);
+        else if(section==9)moreQuran(area);
 
         LinearLayout nav=row();
-        nav.setBackgroundColor(PANEL);
-        nav.setPadding(dp(5),dp(5),dp(5),dp(8));
-        int[] targets={0,1,7};
-        String[] names={"⌂  Ana Sayfa","▦  Kategoriler","▤  Defterim"};
-        for(int i=0;i<3;i++){
-            final int destination=targets[i];
-            boolean selected=section==destination;
-            TextView item=label(names[i],13,selected?GOLD:MUTE,selected);
-            item.setGravity(Gravity.CENTER);
-            item.setOnClickListener(v->tab(destination));
-            nav.addView(item,new LinearLayout.LayoutParams(0,dp(54),1));
+        nav.setPadding(dp(6),dp(7),dp(6),dp(8));
+        nav.setBackgroundColor(0xFF082A22);
+        String[] icons={"▣","☷","▦","▤","✧","⊞"};
+        String[] names={"Kur’an","Sureler","Cüzler","Meal","Tefsir","Diğer"};
+        for(int i=0;i<names.length;i++){
+            final int selection=i;
+            boolean active=(section==8 && (i==(arabic?0:3)))||(section==9&&i==5);
+            LinearLayout tile=column();
+            tile.setGravity(Gravity.CENTER);
+            tile.setBackground(active?luxury(false):shape(0xFF082A22));
+            TextView symbol=label(icons[i],21,active?GOLD:MUTE,true);
+            symbol.setGravity(Gravity.CENTER);
+            tile.addView(symbol);
+            TextView text=label(names[i],11,active?GOLD:MUTE,active);
+            text.setGravity(Gravity.CENTER);
+            tile.addView(text);
+            tile.setOnClickListener(v->navAction(selection));
+            nav.addView(tile,new LinearLayout.LayoutParams(0,dp(60),1));
         }
         root.addView(nav);
         setContentView(root);
@@ -459,85 +540,115 @@ public class MainActivity extends Activity {
             "Video paylaşımı henüz hazır değil.",12,MUTE,false));
     }
 
+
     private void mushafReader(LinearLayout content) {
-        content.addView(button("‹  Kategoriler",()->tab(1),false));
-        space(content,12);
         LinearLayout tabs=row();
-        tabs.addView(button("ARAPÇA",()->mode(true),arabic),new LinearLayout.LayoutParams(0,-2,1));
-        tabs.addView(button("TÜRKÇE MEAL",()->mode(false),!arabic),new LinearLayout.LayoutParams(0,-2,1));
-        content.addView(tabs);space(content,10);
-        if(arabic)tilavetControls(content);
-        LinearLayout find=row();
-        find.addView(button("Sure / Ayet",this::searchAyah,false),new LinearLayout.LayoutParams(0,-2,1));
-        find.addView(button("Sayfaya Git",this::searchPage,false),new LinearLayout.LayoutParams(0,-2,1));
-        content.addView(find);space(content,14);
-        if(arabic) {
-            TextView pageLabel=label("Mushaf • Sayfa "+page+" / 604",17,GOLD,true);
-            pageLabel.setGravity(Gravity.CENTER);content.addView(pageLabel);space(content,10);
+        tabs.addView(button("ARAPÇA MUSHAF",()->mode(true),arabic),
+            new LinearLayout.LayoutParams(0,dp(48),1));
+        tabs.addView(new View(this),new LinearLayout.LayoutParams(dp(9),1));
+        tabs.addView(button("TÜRKÇE MEAL",()->mode(false),!arabic),
+            new LinearLayout.LayoutParams(0,dp(48),1));
+        content.addView(tabs);
+        space(content,12);
+        if(arabic){
+            LinearLayout frame=column();
+            frame.setPadding(dp(5),dp(5),dp(5),dp(5));
+            frame.setBackground(luxury(true));
             Bitmap image=pageBitmap(page);
-            if(image!=null) {
-                ZoomImage viewer=new ZoomImage(this);content.addView(viewer,new LinearLayout.LayoutParams(-1,dp(510)));viewer.setPage(image);
-            } else {
-                TextView pending=label("Mushaf görselleri bu pakette bulunamadı. İçeriği derleme sırasında ekleyin.",16,MUTE,false);
-                pending.setBackground(shape(PANEL));pending.setPadding(dp(20),dp(32),dp(20),dp(32));
-                content.addView(pending,new LinearLayout.LayoutParams(-1,dp(320)));
+            if(image!=null){
+                int width=Math.round(getResources().getDisplayMetrics().widthPixels/
+                    getResources().getDisplayMetrics().density)-36;
+                int proportional=Math.round(width*(float)image.getHeight()/image.getWidth());
+                int height=Math.max(390,Math.min(650,proportional));
+                ZoomImage viewer=new ZoomImage(this);
+                frame.addView(viewer,new LinearLayout.LayoutParams(-1,dp(height)));
+                viewer.setPage(image);
+            }else{
+                TextView pending=label("Bu Mushaf sayfasının görseli pakete eklenmemiş.",16,BG,true);
+                pending.setGravity(Gravity.CENTER);
+                frame.addView(pending,new LinearLayout.LayoutParams(-1,dp(400)));
             }
+            content.addView(frame);
+            space(content,12);
+            LinearLayout pages=row();
+            pages.addView(button("‹  Önceki",()->goPage(page-1),false),
+                new LinearLayout.LayoutParams(0,dp(50),1));
+            TextView number=label(page+" / 604",14,GOLD,true);
+            number.setGravity(Gravity.CENTER);
+            pages.addView(number,new LinearLayout.LayoutParams(dp(86),dp(50)));
+            pages.addView(button("Sonraki  ›",()->goPage(page+1),false),
+                new LinearLayout.LayoutParams(0,dp(50),1));
+            content.addView(pages);
             space(content,10);
-            LinearLayout pageControls=row();
-            pageControls.addView(button("‹ Önceki",()->goPage(page-1),false),new LinearLayout.LayoutParams(0,-2,1));
-            pageControls.addView(button("Sonraki ›",()->goPage(page+1),false),new LinearLayout.LayoutParams(0,-2,1));
-            content.addView(pageControls);space(content,8);
-            content.addView(button("🔖 Bu sayfayı kaydet",()->{
-                bookmark=page;prefs.edit().putInt("bookmark",page).apply();toast("Sayfa kaydedildi.");
-            },false));space(content,8);
-            content.addView(label("Yakınlaştırmak için iki parmağınızı kullanın.",12,MUTE,false));
-        } else {
+            tilavetControls(content);
+            space(content,10);
+            content.addView(label("Mushafı iki parmakla yakınlaştırabilirsiniz.",12,MUTE,false));
+        }else{
             showTurkishMeal(content);
         }
         space(content,12);
+        LinearLayout tools=row();
+        tools.addView(button("⌕  Ayet Ara",this::searchAyah,false),
+            new LinearLayout.LayoutParams(0,-2,1));
+        tools.addView(new View(this),new LinearLayout.LayoutParams(dp(8),1));
+        tools.addView(button("☷  Sayfa Git",this::searchPage,false),
+            new LinearLayout.LayoutParams(0,-2,1));
+        content.addView(tools);
     }
     /** Only verified, packaged offline recordings are offered for playback. */
+
     private void tilavetControls(LinearLayout content){
-        LinearLayout row=row();
-        row.addView(button("♫  "+reader,()->chooseTilavetSurah(),false),
-            new LinearLayout.LayoutParams(0,-2,1));
-        content.addView(row);space(content,6);
-        String name="Sure "+selectedTilavetSurah;
+        LinearLayout panel=column();
+        panel.setPadding(dp(13),dp(15),dp(13),dp(15));
+        panel.setBackground(luxury(false));
+        TextView heading=label("♫  ARAPÇA KUR’AN OKUYUCULARI",14,GOLD,true);
+        panel.addView(heading);
+        space(panel,10);
+        LinearLayout choices=row();
+        choices.addView(button("♙  Erkek Okuyucu",this::chooseTilavetSurah,true),
+            new LinearLayout.LayoutParams(0,dp(52),1));
+        choices.addView(new View(this),new LinearLayout.LayoutParams(dp(8),1));
+        choices.addView(button("♧  Bayan Okuyucu",()->new AlertDialog.Builder(this)
+                .setTitle("Bayan Okuyucular")
+                .setMessage("Bu sürümde doğrulanmış bayan Arapça tilavet ses dosyaları bulunmuyor.")
+                .setPositiveButton("Kapat",null).show(),false),
+            new LinearLayout.LayoutParams(0,dp(52),1));
+        panel.addView(choices);
+        space(panel,9);
+        String surah="Sure "+selectedTilavetSurah;
         if(index!=null)try{
             JSONArray surahs=index.getJSONArray("surahs");
-            name=surahs.getJSONObject(selectedTilavetSurah-1).optString("name",name);
+            surah=surahs.getJSONObject(selectedTilavetSurah-1).optString("name",surah);
         }catch(Exception ignored){}
-        content.addView(label("Dinlenecek sure: "+selectedTilavetSurah+" • "+name,
-            13,MUTE,false));space(content,6);
+        panel.addView(label("Ali el-Huzeyfi (Hafs)  •  "+surah,13,WHITE,true));
+        space(panel,6);
         boolean available=tilavet!=null && tilavet.bundled(selectedTilavetSurah);
         if(tilavet!=null && tilavet.loading())
-            content.addView(label("Ses kaydı hazırlanıyor...",13,MUTE,false));
+            panel.addView(label("Ses kaydı hazırlanıyor...",12,MUTE,false));
         else if(!available)
-            content.addView(label("Bu surenin çevrimdışı ses dosyası henüz pakette yok.",
-                13,MUTE,false));
+            panel.addView(label("Bu sure için çevrimdışı ses kaydı yok.",12,MUTE,false));
         else if(tilavet.playing())
-            content.addView(label("Tilavet çalıyor",13,GOLD,true));
-        else if(tilavet.surah()==selectedTilavetSurah)
-            content.addView(label("Tilavet duraklatıldı",13,MUTE,false));
+            panel.addView(label("Tilavet çalıyor",12,GOLD,false));
         if(tilavet!=null && !tilavet.error().isEmpty())
-            content.addView(label(tilavet.error(),13,MUTE,false));
-        space(content,6);
+            panel.addView(label(tilavet.error(),12,MUTE,false));
+        space(panel,10);
         LinearLayout controls=row();
         boolean same=tilavet!=null && tilavet.surah()==selectedTilavetSurah;
         String caption=tilavet!=null && tilavet.loading()?"Hazırlanıyor":
-            same && tilavet.playing()?"❚❚ Duraklat":
-            same?"▶ Devam":"▶ Sureyi Dinle";
+            same && tilavet.playing()?"❚❚ Duraklat":same?"▶ Devam":"▶ Sureyi Dinle";
         controls.addView(button(caption,()->{
             if(tilavet!=null)tilavet.toggle(selectedTilavetSurah);
-        },available && !tilavet.loading()),new LinearLayout.LayoutParams(0,-2,1));
+        },available && tilavet!=null && !tilavet.loading()),
+            new LinearLayout.LayoutParams(0,dp(48),1));
+        controls.addView(new View(this),new LinearLayout.LayoutParams(dp(8),1));
         controls.addView(button("■ Durdur",()->{
             if(tilavet!=null)tilavet.stop();
-        },false),new LinearLayout.LayoutParams(0,-2,1));
-        content.addView(controls);
-        space(content,5);
-        content.addView(label("Okuma seçilen surenin başından başlar. "
-            +"Ayet bazlı ses takibi doğrulanmadan kullanılmaz.",12,MUTE,false));
-        space(content,12);
+        },false),new LinearLayout.LayoutParams(0,dp(48),1));
+        panel.addView(controls);
+        space(panel,7);
+        panel.addView(label("Ses kaydı sure bazlıdır. Ayet bazlı takip henüz mevcut değildir.",
+            11,MUTE,false));
+        content.addView(panel);
     }
     private void chooseTilavetSurah(){
         if(index==null){toast("Sure listesi bu pakette bulunamadı.");return;}
@@ -693,5 +804,90 @@ public class MainActivity extends Activity {
             }).setNegativeButton("Kapat",null).show();
         }catch(Exception ex){toast("Cüz listesi okunamadı.");}
     }
+
+    private void notReady(String title){
+        new AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage("Bu bölümün doğrulanmış içeriği henüz uygulamaya eklenmedi.")
+            .setPositiveButton("Kapat",null).show();
+    }
+    private void readerPicker() {
+        new AlertDialog.Builder(this).setTitle("Arapça Okuyucular")
+            .setItems(new String[]{"Erkek okuyucu: Ali el-Huzeyfi (Hafs)",
+                                   "Bayan okuyucular"},(d,which)->{
+                if(which==0){arabic=true;tab(8);chooseTilavetSurah();}
+                else new AlertDialog.Builder(this)
+                    .setTitle("Bayan Okuyucular")
+                    .setMessage("Bayan okuyucu ses dosyaları bu APK içinde henüz bulunmuyor.")
+                    .setPositiveButton("Kapat",null).show();
+            }).show();
+    }
+    private void hatimStatus() {
+        new AlertDialog.Builder(this).setTitle("Hatim Takibi")
+            .setMessage("Son açtığınız Mushaf sayfası: "+page+" / 604.\n\n"+
+                "Bu kayıt tamamlanan sayfaları ayrı ayrı doğrulamaz. "+
+                "Ayrıntılı hatim takibi hazırlanıyor.")
+            .setPositiveButton("Mushafı Aç",(d,w)->tab(8))
+            .setNegativeButton("Kapat",null).show();
+    }
+    private void feature(LinearLayout row,String icon,String name,String description,
+                         boolean working,Runnable action) {
+        LinearLayout tile=column();
+        tile.setGravity(Gravity.CENTER_HORIZONTAL);
+        tile.setPadding(dp(9),dp(18),dp(9),dp(16));
+        tile.setMinimumHeight(dp(136));
+        tile.setBackground(luxury(false));
+        TextView emblem=label(icon,30,GOLD,true);
+        emblem.setGravity(Gravity.CENTER);
+        tile.addView(emblem);
+        space(tile,6);
+        TextView title=label(name,16,WHITE,true);
+        title.setGravity(Gravity.CENTER);
+        tile.addView(title);
+        space(tile,5);
+        TextView detail=label(description,11,MUTE,false);
+        detail.setGravity(Gravity.CENTER);
+        tile.addView(detail);
+        space(tile,7);
+        TextView status=label(working?"Kullanıma hazır":"Hazırlanıyor",10,
+            working?GOLD:MUTE,false);
+        status.setGravity(Gravity.CENTER);
+        tile.addView(status);
+        tile.setOnClickListener(v->action.run());
+        row.addView(tile,new LinearLayout.LayoutParams(0,-2,1f));
+    }
+    private void moreQuran(LinearLayout content) {
+        TextView heading=label("✧  KUR’AN REHBERİ  ✧",13,GOLD,true);
+        heading.setGravity(Gravity.CENTER);
+        content.addView(heading);
+        space(content,12);
+        String[] icons={"⌕","♫","۞","◈","◷","☷","✦","▤","آ","♬","☰","⚙"};
+        String[] titles={"Ayet Ara","Okuyucular","Tecvid","Ezber","Hatim Takibi",
+            "Nüzul Sırası","Secde Ayetleri","Kur’an Fihristi",
+            "Kelime Meali","Kıraatler","Tefsir","Ayarlar"};
+        String[] details={"Sure ve ayet bul","Erkek & Bayan","Okuma kuralları",
+            "Ayet ezberleme","Son okunan sayfa","İniş sıralaması",
+            "Tilavet secdesi","Konulara göre ayet","Kelime anlamları",
+            "Farklı okuyuşlar","Ayet açıklamaları","Uygulama ayarları"};
+        boolean[] ready={true,true,false,false,true,false,false,false,false,false,false,true};
+        Runnable[] actions={
+            this::searchAyah,this::readerPicker,()->notReady("Tecvid"),
+            ()->notReady("Ezber"),this::hatimStatus,
+            ()->notReady("Nüzul Sırası"),()->notReady("Secde Ayetleri"),
+            ()->notReady("Kur’an Fihristi"),()->notReady("Kelime Meali"),
+            ()->notReady("Kıraatler"),()->notReady("Tefsir"),
+            ()->tab(6)};
+        for(int i=0;i<titles.length;i+=2){
+            LinearLayout pair=row();
+            feature(pair,icons[i],titles[i],details[i],ready[i],actions[i]);
+            pair.addView(new View(this),new LinearLayout.LayoutParams(dp(10),dp(1)));
+            feature(pair,icons[i+1],titles[i+1],details[i+1],ready[i+1],actions[i+1]);
+            content.addView(pair);
+            space(content,10);
+        }
+        content.addView(label("Hazırlanıyor yazan bölümler henüz kullanılabilir değildir.",
+            12,MUTE,false));
+    }
+
     private void toast(String message){Toast.makeText(this,message,Toast.LENGTH_SHORT).show();}
 }
