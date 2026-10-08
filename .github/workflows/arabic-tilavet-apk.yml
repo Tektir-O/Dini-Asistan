@@ -10,6 +10,9 @@ on:
       - 'app/src/main/java/com/diniasistanim/app/TilavetPlayer.java'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   full-offline-tilavet:
     name: 114 Sure + Mushaf + Meal / Android APK
@@ -80,6 +83,17 @@ jobs:
           sha256sum app/build/outputs/apk/debug/app-debug.apk > Dini-Asistanim-APK-SHA256.txt
           cp app/build/outputs/apk/debug/app-debug.apk Dini-Asistanim-Tam-Huzeyfi-Hafs.apk
           du -h Dini-Asistanim-Tam-Huzeyfi-Hafs.apk
+      - name: Publish premium Quran test release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v0.3.0-premium-deneme \
+            Dini-Asistanim-Tam-Huzeyfi-Hafs.apk \
+            Dini-Asistanim-APK-SHA256.txt \
+            --title 'Dini Asistanim 0.3 Premium Quran Deneme' \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --notes '604 orijinal Mushaf PNG sayfasi, 6236 ayetlik Rowad Turkce meali, 114 surelik Ali el-Huzeyfi Arapca sesi; zumrut-altin premium Quran arayuzu, sureler, cuzler, hatim takibi, ezber isaretleri ve temel tecvid rehberi. Bu bir test surumudur: bayan okuyucu sesleri, tefsir, kiraatler, kelime meali ve diger hazirlanmakta olan moduller tamamlanmadi. Gercek Android telefon kurulumu ve calismasi dogrulanmadi. Icerik haklari: CONTENT_RIGHTS.md.'
       - name: Deliver offline Hafs APK
         uses: actions/upload-artifact@v4
         with:
