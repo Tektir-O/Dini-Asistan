@@ -42,8 +42,8 @@ jobs:
           (cd app/src/main/assets/mushaf/pages && sha256sum -c ../page-sha256.txt > /dev/null)
       - name: Check Turkish meal is bundled
         run: test -s app/src/main/assets/meal-rowad.json
-      # Audio is ONLY bundled from the explicitly verified official Hafs source.
-      # A missing source does NOT imply that audio playback is complete.
+      - name: Inspect official audio download links
+        run: python3 scripts/discover_huzayfi_source.py
       - name: Prepare offline Huzayfi audio if official source is configured
         env:
           HUZAYFI_AUDIO_ARCHIVE_URL: ${{ secrets.HUZAYFI_AUDIO_ARCHIVE_URL }}
