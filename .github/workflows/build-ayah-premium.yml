@@ -48,6 +48,7 @@ jobs:
       - name: Sayfa hizalama testleri
         run: python scripts/test_mushaf_alignment.py
 
+      # VBR source durations are calibrated to final Opus length before validation.
       - name: 6236 ayet MP3 kaydindan 604 dogru sure/sayfa sesini birlestir
         run: |
           python -u scripts/build_ayah_pages.py
