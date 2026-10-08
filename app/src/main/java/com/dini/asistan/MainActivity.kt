@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
@@ -45,8 +46,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         currentSurah = (savedInstanceState?.getInt("surah") ?: getPreferences(MODE_PRIVATE).getInt("surah", 1)).coerceIn(1, 114)
-        currentPage = savedInstanceState?.getInt("page")
-            ?: getPreferences(MODE_PRIVATE).getInt("page", 1).coerceIn(1, 604)
+        currentPage = (savedInstanceState?.getInt("page")
+            ?: getPreferences(MODE_PRIVATE).getInt("page", 1)).coerceIn(1, 604)
         screen = when (savedInstanceState?.getString("screen")) {
             "QURAN" -> Screen.QURAN
             "SURAH" -> Screen.SURAH
@@ -253,7 +254,7 @@ class MainActivity : Activity() {
     }
 
     private fun changePage(delta: Int) {
-        val target = (currentPage + delta).coerceIn(1, 604)
+        val target = MushafNavigation.move(currentPage, delta)
         if (target == currentPage) return
         audio.stop()
         currentPage = target
@@ -339,13 +340,43 @@ class MainActivity : Activity() {
         body.addView(pageLabel, matchWrap())
 
         val paperFrame = FrameLayout(this).apply {
-            background = rounded(Color.WHITE, 12)
+            background = rounded(Color.WHITE, 9)
             elevation = dp(2).toFloat()
+            clipToPadding = true
+            clipChildren = true
         }
         val pageImage = ImageView(this).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = true
+            adjustViewBounds = false
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setBackgroundColor(Color.WHITE)
             contentDescription = "Mushaf sayfa $currentPage"
+        }
+        var startX = 0f
+        var startY = 0f
+        pageImage.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    startX = event.x
+                    startY = event.y
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val diffX = event.x - startX
+                    val diffY = event.y - startY
+                    val direction = MushafNavigation.swipeDelta(
+                        diffX, diffY, dp(45).toFloat()
+                    )
+                    if (direction != 0) {
+                        changePage(direction)
+                    } else {
+                        view.performClick()
+                    }
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> true
+                else -> true
+            }
         }
         paperFrame.addView(pageImage, FrameLayout.LayoutParams(-1, -1))
         if (!catalog.hasPageImage(currentPage)) {
@@ -368,22 +399,23 @@ class MainActivity : Activity() {
             }
         }
         val paperHolder = FrameLayout(this).apply {
-            setPadding(dp(16), 0, dp(16), 0)
+            setPadding(dp(10), 0, dp(10), 0)
             addView(paperFrame, FrameLayout.LayoutParams(-1, -1))
         }
         body.addView(paperHolder, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val controls = column().apply { sectionPadding(this, 12, 9) }
 
-        val pager = row()
-        val previous = button("‹  Geri Sayfa", darkGreen) { changePage(-1) }.apply {
-            isEnabled = currentPage > 1
-        }
-        val next = button("İleri Sayfa  ›", darkGreen) { changePage(1) }.apply {
+        // Mushaf Arapça okunur: ileri sayfa daima SOLDADIR, geri sayfa SAĞDADIR.
+        val pager = row().apply { layoutDirection = View.LAYOUT_DIRECTION_LTR }
+        val next = button("‹  İleri Sayfa", darkGreen) { changePage(1) }.apply {
             isEnabled = currentPage < 604
         }
-        pager.addView(previous, LinearLayout.LayoutParams(0, dp(49), 1f))
+        val previous = button("Geri Sayfa  ›", darkGreen) { changePage(-1) }.apply {
+            isEnabled = currentPage > 1
+        }
         pager.addView(next, LinearLayout.LayoutParams(0, dp(49), 1f))
+        pager.addView(previous, LinearLayout.LayoutParams(0, dp(49), 1f))
         controls.addView(pager, matchWrap())
 
         val transport = row()
