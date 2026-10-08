@@ -1,0 +1,12 @@
+{
+  "name": "dini-asistanim-content-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:index": "node scripts/generate_index.mjs"
+  },
+  "dependencies": {
+    "quran-meta": "7.0.0"
+  }
+}

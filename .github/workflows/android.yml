@@ -1,0 +1,47 @@
+name: Dini Asistanim APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Quran index
+        run: |
+          npm install --no-audit --no-fund --no-package-lock
+          npm run generate:index
+      - name: Mushaf
+        run: bash scripts/prepare_mushaf.sh
+      - name: Integrity verification
+        run: |
+          test "$(find app/src/main/assets/mushaf/pages -name '*.png' | wc -l)" -eq 604
+          test "$(wc -l < app/src/main/assets/mushaf/page-sha256.txt)" -eq 604
+          (cd app/src/main/assets/mushaf/pages && sha256sum -c ../page-sha256.txt > /dev/null)
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+      - name: Publish APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dini-Asistanim-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
