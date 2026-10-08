@@ -204,6 +204,10 @@ def main():
     groups=page_ayah_keys(starts,counts)
     download_all(counts)
     create_audio(groups)
+    index_path=QURAN_DEST/"ayah-page-index.json"
+    assembled=json.loads(index_path.read_text(encoding="utf8"))
+    assembled["surahVerseCounts"]={str(k):v for k,v in counts.items()}
+    index_path.write_text(json.dumps(assembled,ensure_ascii=False,separators=(",",":")),encoding="utf8")
     render_pages()
     total=sum(p.stat().st_size for p in PAGE_DEST.glob("*.opus"))
     total+=sum(p.stat().st_size for p in PRINT_DEST.glob("*.webp"))
