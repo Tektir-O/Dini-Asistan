@@ -21,6 +21,33 @@ class OfflineCatalog(private val context: Context) {
         JSONObject(text).optJSONObject("pages") ?: JSONObject()
     }
 
+    private val ayahPageIndex: JSONObject by lazy {
+        try {
+            val json = context.assets.open("quran/ayah-page-index.json").bufferedReader().use { it.readText() }
+            JSONObject(json).optJSONObject("pages") ?: JSONObject()
+        } catch (_: IOException) { JSONObject() }
+    }
+
+    fun ayahAudioPath(page: Int): String = "audio/pages/${three(page)}.opus"
+
+    fun ayahCues(page: Int): List<AyahCue> {
+        if (page !in 1..604) return emptyList()
+        val arr=ayahPageIndex.optJSONArray(page.toString()) ?: return emptyList()
+        val result=ArrayList<AyahCue>(arr.length())
+        try {
+            for (i in 0 until arr.length()) {
+                val node=arr.getJSONObject(i)
+                result.add(AyahCue(node.getInt("surah"),node.getInt("ayah"),node.getInt("fromMs"),node.getInt("toMs")))
+            }
+        } catch (_: Exception) { return emptyList() }
+        return if (AyahCuePlan.valid(result)) result else emptyList()
+    }
+
+    fun hasAyahPage(page: Int): Boolean = page in 1..604 && ayahCues(page).isNotEmpty() && try {
+        context.assets.openFd(ayahAudioPath(page)).close()
+        true
+    } catch (_: IOException) { false }
+
     private fun three(number: Int) = String.format(Locale.ROOT, "%03d", number)
 
     fun pageImagePath(page: Int): String = "mushaf/${three(page)}.webp"
