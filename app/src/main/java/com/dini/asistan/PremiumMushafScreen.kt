@@ -120,27 +120,27 @@ class PremiumMushafScreen(
             gravity=Gravity.CENTER
             setPadding(dp(12),dp(9),dp(12),dp(6))
         }
-        headline.addView(text("☪  ۞  ☪",23f,goldPale,true,true),lp(-1,dp(31)))
-        headline.addView(text("KUR’AN-I KERİM",30f,goldPale,true,true),lp(-1,dp(42)))
-        headline.addView(text("Medine Mushafı • Hafs",17f,ivory,false,true),lp(-1,dp(29)))
-        headline.addView(text("✦  ──────────  ◈  ──────────  ✦",12f,gold),lp(-1,dp(19)))
+        headline.addView(text("☪  ۞  ☪",19f,goldPale,true,true),lp(-1,dp(23)))
+        headline.addView(text("KUR’AN-I KERİM",26f,goldPale,true,true),lp(-1,dp(33)))
+        headline.addView(text("Medine Mushafı • Hafs",15f,ivory,false,true),lp(-1,dp(23)))
+        headline.addView(text("✦  ──────────  ◈  ──────────  ✦",12f,gold),lp(-1,dp(13)))
         header.addView(headline,FrameLayout.LayoutParams(-1,-1))
-        root.addView(header,lp(-1,dp(132)))
+        root.addView(header,lp(-1,dp(102)))
 
         val surface=col().apply{
             background=round(ivory,gold,23,2)
-            setPadding(dp(10),dp(7),dp(10),dp(8))
+            setPadding(dp(8),dp(5),dp(8),dp(6))
         }
         val indicator=row()
         indicator.addView(text("──── ◇",13f,gold),LinearLayout.LayoutParams(0,dp(34),1f))
-        val pageLabel=text("Sayfa $page / 604",23f,dark,true,true).apply{
+        val pageLabel=text("Sayfa $page / 604",21f,dark,true,true).apply{
             background=round(ivory,gold,12,1)
             setPadding(dp(12),0,dp(12),0)
         }
-        indicator.addView(pageLabel,lp(dp(194),dp(35)))
+        indicator.addView(pageLabel,lp(dp(194),dp(32)))
         indicator.addView(text("◇ ────",13f,gold),LinearLayout.LayoutParams(0,dp(34),1f))
-        surface.addView(indicator,lp(-1,dp(39)))
-        surface.addView(space(4))
+        surface.addView(indicator,lp(-1,dp(35)))
+        surface.addView(space(3))
 
         val holder=FrameLayout(activity).apply {
             background=round(Color.WHITE,gold,17,2)
@@ -179,21 +179,21 @@ class PremiumMushafScreen(
             holder.addView(text("Mushaf görseli henüz eklenmedi",15f,ink),FrameLayout.LayoutParams(-1,-1))
         }
         surface.addView(holder,LinearLayout.LayoutParams(-1,0,1f))
-        surface.addView(space(5))
+        surface.addView(space(4))
 
         // Source image has direction reversed; the Mushaf requirement is LEFT = next.
         val pager=row()
         pager.addView(darkButton("‹  İleri Sayfa"){ onPage(1) }.apply{isEnabled=page<604},
-            LinearLayout.LayoutParams(0,dp(49),1f))
+            LinearLayout.LayoutParams(0,dp(34),1f))
         pager.addView(View(activity),lp(dp(8),dp(1)))
         pager.addView(darkButton("Geri Sayfa  ›"){onPage(-1)}.apply{isEnabled=page>1},
-            LinearLayout.LayoutParams(0,dp(49),1f))
-        surface.addView(pager,lp(-1,dp(49)))
-        surface.addView(space(6))
+            LinearLayout.LayoutParams(0,dp(34),1f))
+        surface.addView(pager,lp(-1,dp(43)))
+        surface.addView(space(4))
 
         val playerPanel=col().apply {
             background=round(dark,gold,15,2)
-            setPadding(dp(9),dp(8),dp(9),dp(7))
+            setPadding(dp(8),dp(4),dp(8),dp(3))
         }
         val timeline=row()
         timeline.addView(text("◖))",17f,goldPale),lp(dp(37),dp(27)))
@@ -217,7 +217,7 @@ class PremiumMushafScreen(
         bar=seek
         timeline.addView(seek,LinearLayout.LayoutParams(0,dp(29),1f))
         timeline.addView(text("☷",22f,goldPale),lp(dp(33),dp(29)))
-        playerPanel.addView(timeline,lp(-1,dp(31)))
+        playerPanel.addView(timeline,lp(-1,dp(29)))
 
         val labels=row()
         elapsed=text("00:00",13f,ivory,true,true)
@@ -227,7 +227,7 @@ class PremiumMushafScreen(
         cueLabel=c
         labels.addView(c,LinearLayout.LayoutParams(0,dp(19),3f))
         labels.addView(remaining,LinearLayout.LayoutParams(0,dp(19),1f))
-        playerPanel.addView(labels,lp(-1,dp(21)))
+        playerPanel.addView(labels,lp(-1,dp(18)))
 
         val transport=row()
         val previous=darkButton("Ⅰ◀"){player.previousAyah()}
@@ -237,32 +237,32 @@ class PremiumMushafScreen(
             else player.play(page)
         }.apply{textSize=20f}
         playButton=toggle
-        transport.addView(previous,LinearLayout.LayoutParams(0,dp(43),1f))
+        transport.addView(previous,LinearLayout.LayoutParams(0,dp(34),1f))
         transport.addView(toggle,LinearLayout.LayoutParams(0,dp(43),1f))
         transport.addView(next,LinearLayout.LayoutParams(0,dp(43),1f))
-        playerPanel.addView(transport,lp(-1,dp(43)))
+        playerPanel.addView(transport,lp(-1,dp(34)))
         val statusMessage=text("",11f,goldPale)
         status=statusMessage
-        playerPanel.addView(statusMessage,lp(-1,dp(15)))
-        surface.addView(playerPanel,lp(-1,dp(123)))
-        surface.addView(space(6))
+        playerPanel.addView(statusMessage,lp(-1,dp(13)))
+        surface.addView(playerPanel,lp(-1,dp(107)))
+        surface.addView(space(4))
 
         val downloads=col()
         val first=row()
-        first.addView(disabledButton("⇩  Mushaf İndir"),LinearLayout.LayoutParams(0,dp(39),1f))
+        first.addView(disabledButton("⇩  Mushaf İndir"),LinearLayout.LayoutParams(0,dp(34),1f))
         first.addView(View(activity),lp(dp(7),1))
-        first.addView(disabledButton("⇩  Tilavet İndir"),LinearLayout.LayoutParams(0,dp(39),1f))
-        downloads.addView(first,lp(-1,dp(39)))
-        downloads.addView(space(5))
+        first.addView(disabledButton("⇩  Tilavet İndir"),LinearLayout.LayoutParams(0,dp(34),1f))
+        downloads.addView(first,lp(-1,dp(34)))
+        downloads.addView(space(4))
         val second=row()
-        second.addView(disabledButton("⇩  Meal İndir"),LinearLayout.LayoutParams(0,dp(39),1f))
+        second.addView(disabledButton("⇩  Meal İndir"),LinearLayout.LayoutParams(0,dp(34),1f))
         second.addView(View(activity),lp(dp(7),1))
-        second.addView(disabledButton("▣  Video Oluştur"),LinearLayout.LayoutParams(0,dp(39),1f))
-        downloads.addView(second,lp(-1,dp(39)))
-        surface.addView(downloads,lp(-1,dp(83)))
+        second.addView(disabledButton("▣  Video Oluştur"),LinearLayout.LayoutParams(0,dp(34),1f))
+        downloads.addView(second,lp(-1,dp(34)))
+        surface.addView(downloads,lp(-1,dp(72)))
 
         root.addView(surface,LinearLayout.LayoutParams(-1,0,1f).apply{
-            setMargins(dp(6),dp(4),dp(6),dp(4))
+            setMargins(dp(5),dp(3),dp(5),dp(3))
         })
         return root
     }
