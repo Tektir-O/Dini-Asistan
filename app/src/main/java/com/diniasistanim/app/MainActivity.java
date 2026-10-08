@@ -383,7 +383,7 @@ public class MainActivity extends Activity {
              ()->new AlertDialog.Builder(this).setTitle("İçerik Bilgisi")
                .setMessage("Arapça Mushaf: Medine Mushafı, 604 sayfa.\n\n"+
                    "Türkçe meal: Rowad Tercüme Merkezi, QuranEnc.com, v1.0.4.\n\n"+
-                   (tilavet!=null && tilavet.allBundled() ? "Arapça tilavet: Ali el-Huzeyfi (Hafs). 114 surenin ses kaydı çevrimdışı kullanılabilir." : "Arapça tilavet: Ali el-Huzeyfi (Hafs). Ses arşivi henüz kurulum paketine eklenmedi."))
+                   (tilavet!=null && tilavet.allBundled() ? "Arapça tilavet: Ali el-Huzeyfi (Hafs). Kaynak: MP3Quran.net. 114 surenin ses kaydı çevrimdışı kullanılabilir." : "Arapça tilavet: Ali el-Huzeyfi (Hafs). Kaynak: MP3Quran.net. Ses arşivi henüz kurulum paketine eklenmedi."))
                .setPositiveButton("Kapat",null).show());
         item(content,"▤  Notlarımı Aç","Kişisel notlarına ulaş",()->tab(4));
         space(content,18);
@@ -451,7 +451,7 @@ public class MainActivity extends Activity {
             ()->new AlertDialog.Builder(this)
                 .setTitle("Arapça Tilavet")
                 .setMessage("Okuyucu: Ali el-Huzeyfi (Hafs).\n\n"
-                    +(tilavet!=null && tilavet.allBundled() ? "114 sure çevrimdışı dinlenebilir. Ayet bazlı takip henüz doğrulanmadı." : "Resmî ses dosyaları doğrulanıp kurulum paketine eklenince çevrimdışı dinleme açılacak."))
+                    +(tilavet!=null && tilavet.allBundled() ? "114 sure çevrimdışı dinlenebilir. Ayet bazlı takip henüz doğrulanmadı." : "MP3Quran.net ses dosyaları doğrulanıp kurulum paketine eklenince çevrimdışı dinleme açılacak."))
                 .setPositiveButton("Anladım",null).show());
 
         content.addView(label("Kur’an ve meal sayfaları çevrimdışıdır. "
