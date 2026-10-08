@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/audit-mushaf-page-order.yml"
+      - "scripts/audit_mushaf_pages.py"
+      - "scripts/mushaf_alignment.py"
 permissions:
   contents: read
 jobs:
