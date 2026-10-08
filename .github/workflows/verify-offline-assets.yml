@@ -1,0 +1,55 @@
+name: Quran Kaynaklarini Tam Test Et
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/verify-offline-assets.yml"
+      - "scripts/verify_offline_assets.py"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  complete-verification:
+    name: 114 sure + mushaf: tam ses decode ve tum PDF sayfalari
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SOURCE_RUN_ID: "37764358206"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dogrulama kutuphanelerini kur
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          python -m pip install --no-cache-dir PyMuPDF
+      - name: Onceden indirilen kaynak paketini GitHub Actions'tan al
+        run: |
+          mkdir -p input-package
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name verified-quran-offline-source-package --dir input-package
+          test -s input-package/offline-quran-hafs-maher-sources.zip
+          unzip -q input-package/offline-quran-hafs-maher-sources.zip
+          test -f offline-sources/SOURCE-MANIFEST.json
+      - name: Her sesin tamamini coz, ses sinyalini olc, 640 PDF sayfasini render et, SHA256 kontrol et
+        run: python scripts/verify_offline_assets.py
+      - name: Dogrulama raporunu kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-deep-verification-report
+          path: quran-verification-report.json
+          retention-days: 90
+          if-no-files-found: error
+      - name: Yayina uygunlugu onaylanmamis paketi taslak surumde sakla
+        run: |
+          tag="offline-hafs-maher-archive-v2"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "TASLAK: Mushaf PDF + 114 tam sure kaynak paketi" --notes "Teknik kontroller tamam. Bu bir APK degildir. Ses aynasinin resmi lisansli kayitla ozdesligi ve 604 mushaf sayfasinin tek tek icerigi henüz bagimsiz onaylanmadi. Bu nedenle release taslaktir."
+          fi
+          gh release upload "$tag" input-package/offline-quran-hafs-maher-sources.zip quran-verification-report.json --clobber
