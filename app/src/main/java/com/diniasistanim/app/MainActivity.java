@@ -33,6 +33,11 @@ public class MainActivity extends Activity {
     private final String reader="Ali el-Huzeyfi (Hafs)";
     private TilavetPlayer tilavet;
     private int selectedTilavetSurah=1;
+    private ScrollView mainScroller;
+    private int renderedSection=-1, renderedPage=-1;
+    private boolean renderedArabic=true;
+    private Bitmap cachedPageBitmap;
+    private int cachedPage=-1;
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -145,6 +150,9 @@ public class MainActivity extends Activity {
         else tab(9);
     }
     private void render() {
+        final int previousY=mainScroller!=null && renderedSection==section &&
+            renderedPage==page && renderedArabic==arabic ? mainScroller.getScrollY() : 0;
+        renderedSection=section;renderedPage=page;renderedArabic=arabic;
         LinearLayout root=column();
         root.setBackgroundColor(BG);
         LinearLayout top=column();
@@ -219,6 +227,8 @@ public class MainActivity extends Activity {
         }
         root.addView(nav);
         setContentView(root);
+        mainScroller=scroller;
+        if(previousY>0)scroller.post(()->scroller.scrollTo(0,previousY));
     }
     private void sectionTitle(LinearLayout parent,String title,String subtitle) {
         parent.addView(label(title,24,WHITE,true));
@@ -725,13 +735,19 @@ public class MainActivity extends Activity {
         content.addView(navigation);
     }
     private Bitmap pageBitmap(int number) {
+        if(cachedPage==number && cachedPageBitmap!=null && !cachedPageBitmap.isRecycled())
+            return cachedPageBitmap;
         String path=String.format(Locale.ROOT,"mushaf/pages/%03d.png",number);
         try(InputStream in=getAssets().open(path)) {
             BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeStream(in,null,o);
             int limit=Math.max(1200,getResources().getDisplayMetrics().widthPixels*2);
             int sample=1;while(o.outWidth/(sample*2)>=limit)sample*=2;
             o.inJustDecodeBounds=false;o.inSampleSize=sample;o.inPreferredConfig=Bitmap.Config.RGB_565;
-            try(InputStream second=getAssets().open(path)){return BitmapFactory.decodeStream(second,null,o);}
+            try(InputStream second=getAssets().open(path)){
+                Bitmap decoded=BitmapFactory.decodeStream(second,null,o);
+                if(decoded!=null){cachedPage=number;cachedPageBitmap=decoded;}
+                return decoded;
+            }
         } catch(Exception ex){return null;}
     }
     private void mode(boolean value){arabic=value;prefs.edit().putBoolean("arabic",value).apply();render();}
