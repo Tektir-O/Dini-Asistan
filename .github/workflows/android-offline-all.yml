@@ -1,0 +1,101 @@
+name: Dini Asistan - Tek APK Icinde Offline Kur'an
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-offline-all.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  assemble-all:
+    name: 604 mushaf sayfasi + 114 tilavet + tek APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SOURCE_RUN_ID: "37764358206"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: GitHub projesini indir
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK kur
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Mushaf render icin Python kutuphanelerini kur
+        run: python -m pip install --no-cache-dir PyMuPDF Pillow
+
+      - name: Daha once kontrol edilmis 114 ses ve Mushaf paketini GitHub'dan al
+        run: |
+          mkdir -p input-package
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name verified-quran-offline-source-package --dir input-package
+          test -s input-package/offline-quran-hafs-maher-sources.zip
+          unzip -q input-package/offline-quran-hafs-maher-sources.zip
+          test -s offline-sources/SOURCE-MANIFEST.json
+          rm -rf input-package
+          df -h .
+
+      - name: Tamamlanan 114 sureyi ve 604 Mushaf sayfasini APK assets'e yerlestir
+        run: |
+          python scripts/pack_full_offline_apk.py
+          python scripts/validate_page_cues.py
+          test "$(find app/src/main/assets/mushaf -maxdepth 1 -name '*.webp' | wc -l)" -eq 604
+          test "$(find app/src/main/assets/audio/surah -maxdepth 1 -name '*.opus' | wc -l)" -eq 114
+          rm -rf offline-sources
+          du -sh app/src/main/assets
+          df -h .
+
+      - name: Android birim testlerini calistir ve tum dosyalar gomulu APK derle
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+
+      - name: APK kalite kapisi - internet yok, 604 sayfa, 114 sure, imza
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$APK" > permissions.txt
+          if grep -F 'android.permission.INTERNET' permissions.txt; then
+            echo "::error::OFFLINE APP MUST NOT REQUEST INTERNET!"
+            exit 1
+          fi
+          unzip -Z1 "$APK" > apk-file-list.txt
+          PAGE_COUNT="$(grep -Ec '^assets/mushaf/[0-9]{3}\.webp$' apk-file-list.txt || true)"
+          AUDIO_COUNT="$(grep -Ec '^assets/audio/surah/[0-9]{3}\.opus$' apk-file-list.txt || true)"
+          echo "604 sayfa pakette: $PAGE_COUNT"
+          echo "114 sure pakette: $AUDIO_COUNT"
+          test "$PAGE_COUNT" -eq 604
+          test "$AUDIO_COUNT" -eq 114
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          sha256sum "$APK" > apk.sha256
+          echo "APK size:"
+          ls -lh "$APK"
+          echo "TEST OK: APK has 604 WebP pages + 114 Opus surahs + NO INTERNET permission."
+
+      - name: Tek APK ve dogrulama raporu
+        uses: actions/upload-artifact@v4
+        with:
+          name: dini-asistan-cevrimdisi-604-sayfa-114-sure-apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk.sha256
+            permissions.txt
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
