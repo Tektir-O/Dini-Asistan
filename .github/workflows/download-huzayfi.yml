@@ -25,21 +25,29 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-  hepsi:
-    name: 114 sureyi eksiksiz indir
+  ses_paketleri:
+    name: Sureler ${{ matrix.range }}
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {start: 1, end: 10, range: '001-010'}
+          - {start: 11, end: 30, range: '011-030'}
+          - {start: 31, end: 60, range: '031-060'}
+          - {start: 61, end: 114, range: '061-114'}
     steps:
       - uses: actions/checkout@v4
       - name: Install audio verification tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-      - name: Download and check all 114 surahs
-        run: python3 scripts/download_huzayfi_mp3quran.py
-      - name: Upload all 114 surahs
+      - name: Download and verify MP3 recordings
+        run: python3 scripts/download_huzayfi_mp3quran.py --start ${{ matrix.start }} --end ${{ matrix.end }}
+      - name: Upload MP3s
         uses: actions/upload-artifact@v4
         with:
-          name: Ali-el-Huzeyfi-Hafs-Tam-114-Sure-MP3
-          path: dist/Ali-el-Huzeyfi-Hafs-114-Sure-MP3.zip
+          name: Ali-el-Huzeyfi-Hafs-${{ matrix.range }}
+          path: dist/Ali-el-Huzeyfi-Hafs-${{ matrix.range }}.zip
           retention-days: 14
           compression-level: 0
           if-no-files-found: error
