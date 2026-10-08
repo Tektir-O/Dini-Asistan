@@ -78,37 +78,315 @@ public class MainActivity extends Activity {
         card.setOnClickListener(v->action.run());list.addView(card);space(list,12);
     }
     private void tab(int choice) { section=choice; render(); }
+    @Override public void onBackPressed() {
+        if(section==0)super.onBackPressed();
+        else if(section==1 || section==7)tab(0);
+        else tab(1);
+    }
     private void render() {
-        LinearLayout root=column();root.setBackgroundColor(BG);
-        LinearLayout title=column();title.setPadding(dp(20),dp(18),dp(20),dp(12));
-        title.addView(label("DİNİ ASİSTANIM",25,GOLD,true));title.addView(label("Kur’an-ı Kerim",14,MUTE,false));root.addView(title);
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
-        LinearLayout content=column();content.setPadding(dp(16),dp(12),dp(16),dp(22));scroll.addView(content);
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        if(section==0)home(content); else if(section==1)categories(content); else quran(content);
-        LinearLayout nav=row();nav.setBackgroundColor(PANEL);
-        String[] names={"Başlıklar","Kategoriler","Kur’an"};
-        for(int i=0;i<3;i++){ final int id=i; TextView t=label(names[i],14,i==section?GOLD:MUTE,i==section);
-            t.setGravity(Gravity.CENTER);t.setOnClickListener(v->tab(id));nav.addView(t,new LinearLayout.LayoutParams(0,dp(58),1)); }
-        root.addView(nav);setContentView(root);
+        LinearLayout root=column();
+        root.setBackgroundColor(BG);
+        LinearLayout top=row();
+        top.setPadding(dp(20),dp(14),dp(18),dp(14));
+        LinearLayout identity=column();
+        identity.addView(label("☪  DİNİ ASİSTANIM",22,GOLD,true));
+        space(identity,3);
+        identity.addView(label("Her gün iyiliğe bir adım",12,MUTE,false));
+        top.addView(identity,new LinearLayout.LayoutParams(0,-2,1f));
+        TextView settings=button("⚙",()->tab(6),false);
+        top.addView(settings,new LinearLayout.LayoutParams(dp(52),-2));
+        root.addView(top);
+
+        ScrollView scroller=new ScrollView(this);
+        scroller.setFillViewport(true);
+        scroller.setClipToPadding(false);
+        LinearLayout area=column();
+        area.setPadding(dp(16),dp(12),dp(16),dp(26));
+        scroller.addView(area);
+        root.addView(scroller,new LinearLayout.LayoutParams(-1,0,1f));
+        if(section==0)home(area);
+        else if(section==1)categories(area);
+        else if(section==2)quran(area);
+        else if(section==3)tasbih(area);
+        else if(section==4)notes(area);
+        else if(section==5)worship(area);
+        else if(section==6)settings(area);
+        else if(section==7)myBook(area);
+
+        LinearLayout nav=row();
+        nav.setBackgroundColor(PANEL);
+        nav.setPadding(dp(5),dp(5),dp(5),dp(8));
+        int[] targets={0,1,7};
+        String[] names={"⌂  Ana Sayfa","▦  Kategoriler","▤  Defterim"};
+        for(int i=0;i<3;i++){
+            final int destination=targets[i];
+            boolean selected=section==destination;
+            TextView item=label(names[i],13,selected?GOLD:MUTE,selected);
+            item.setGravity(Gravity.CENTER);
+            item.setOnClickListener(v->tab(destination));
+            nav.addView(item,new LinearLayout.LayoutParams(0,dp(54),1));
+        }
+        root.addView(nav);
+        setContentView(root);
+    }
+    private void sectionTitle(LinearLayout parent,String title,String subtitle) {
+        parent.addView(label(title,24,WHITE,true));
+        space(parent,5);
+        parent.addView(label(subtitle,14,MUTE,false));
+        space(parent,18);
+    }
+    private void hero(LinearLayout parent) {
+        GradientDrawable backdrop=new GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,new int[]{0xFF2F6263,0xFF16363B,0xFF11282F});
+        backdrop.setCornerRadius(dp(22));
+        LinearLayout card=column();
+        card.setPadding(dp(20),dp(24),dp(20),dp(22));
+        card.setBackground(backdrop);
+        card.addView(label("GÜNLÜK YOL ARKADAŞIN",11,GOLD,true));
+        space(card,12);
+        card.addView(label("Huzurla, adım adım.",25,WHITE,true));
+        space(card,8);
+        card.addView(label("Kur’an oku, tesbihatını takip et ve notlarını sakla.",14,WHITE,false));
+        space(card,20);
+        card.addView(button("📖  Kur’an okumaya devam et   ›",()->tab(2),true));
+        parent.addView(card);
+    }
+    private void categoryTile(LinearLayout parent,String icon,String name,
+                              String detail,boolean ready,Runnable open) {
+        LinearLayout tile=column();
+        tile.setPadding(dp(14),dp(16),dp(12),dp(15));
+        tile.setMinimumHeight(dp(146));
+        tile.setBackground(shape(PANEL));
+        tile.addView(label(icon,29,GOLD,false));
+        space(tile,9);
+        tile.addView(label(name,16,WHITE,true));
+        space(tile,4);
+        tile.addView(label(detail,12,MUTE,false));
+        space(tile,7);
+        tile.addView(label(ready?"● Kullanıma hazır":"○ Planlanıyor",11,
+            ready?0xFF93D7B1:MUTE,false));
+        tile.setOnClickListener(v->{
+            if(ready && open!=null)open.run();
+            else toast("Bu bölüm henüz hazırlanıyor.");
+        });
+        parent.addView(tile,new LinearLayout.LayoutParams(0,-2,1));
+    }
+    private void categoryPair(LinearLayout body,String icon1,String name1,
+        String detail1,boolean ready1,Runnable run1,
+        String icon2,String name2,String detail2,boolean ready2,Runnable run2) {
+        LinearLayout pair=row();
+        categoryTile(pair,icon1,name1,detail1,ready1,run1);
+        pair.addView(new View(this),new LinearLayout.LayoutParams(dp(10),1));
+        categoryTile(pair,icon2,name2,detail2,ready2,run2);
+        body.addView(pair);
+        space(body,10);
+    }
+    private int todayCount() {
+        int count=0;
+        for(int i=0;i<5;i++)if(prefs.getBoolean(todayKey(i),false))count++;
+        return count;
+    }
+    private String todayKey(int i) {
+        return "prayer_"+java.time.LocalDate.now()+"_"+i;
     }
     private void home(LinearLayout content) {
-        content.addView(label("Esselâmü aleyküm",25,WHITE,true));space(content,10);
-        content.addView(label("Kur’an sayfalarını internet olmadan okuyun.",15,MUTE,false));space(content,26);
-        item(content,"📖 Kur’an-ı Kerim","604 sayfalık Medine Mushafı",()->tab(2));
-        item(content,"🔎 Sure / Ayet Ara","Doğru sayfaya geç",this::searchAyah);
-        item(content,"🔖 Kaldığım Yer",bookmark>0?"Sayfa "+bookmark:"Kayıt bulunmuyor",()->{
-            if(bookmark>0)goPage(bookmark);else toast("Önce yer imi ekleyin.");
-        });
-        item(content,"📜 Sureler","114 sure listesi",this::showSurahs);
-        content.addView(label("Seslendirme, 5 meal ve video paylaşımı bu ilk sürümde henüz bulunmuyor.",13,MUTE,false));
+        hero(content);
+        space(content,23);
+        content.addView(label("Bugün",20,WHITE,true));
+        space(content,9);
+        item(content,"◷  İbadet Takibim",todayCount()+" / 5 namaz işaretlendi",
+             ()->tab(5));
+        item(content,"⌑  Kaldığım Sayfa","Mushaf • Sayfa "+page,
+             ()->tab(2));
+        space(content,10);
+        content.addView(label("Kategorileri keşfet",20,WHITE,true));
+        space(content,11);
+        categoryPair(content,"📖","Kur’an","Mushaf ve Türkçe meal",true,()->tab(2),
+             "◉","Tesbihat","Dijital zikir sayacı",true,()->tab(3));
+        categoryPair(content,"☼","İbadet Takibi","Günlük işaretleme",true,()->tab(5),
+             "✎","Notlarım","Kişisel kayıtlar",true,()->tab(4));
+        content.addView(button("Tüm kategorileri gör   ›",()->tab(1),false));
     }
     private void categories(LinearLayout content) {
-        content.addView(label("Kategoriler",24,WHITE,true));space(content,16);
-        item(content,"114 Sure","Sure seçerek oku",this::showSurahs);
-        item(content,"30 Cüz","Cüz başlangıcına git",this::showJuz);
-        item(content,"604 Sayfa","Sayfa numarasıyla aç",this::searchPage);
+        sectionTitle(content,"Kategoriler","Dini Asistanım’ın bölümleri");
+        content.addView(label("OKUMA VE İBADET",12,GOLD,true));
+        space(content,10);
+        categoryPair(content,"📖","Kur’an-ı Kerim","604 sayfa • Türkçe meal",true,()->tab(2),
+             "◉","Tesbihat","Çevrimdışı sayaç",true,()->tab(3));
+        categoryPair(content,"☼","İbadet Takibi","Günlük namaz kaydı",true,()->tab(5),
+             "✎","Manevi Notlar","Kişisel not defteri",true,()->tab(4));
+        space(content,18);
+        content.addView(label("KUR’AN ARAÇLARI",12,GOLD,true));
+        space(content,10);
+        item(content,"⌕  Sure ve Ayet Arama","114 sure arasından doğru sayfayı bul",
+             this::searchAyah);
+        item(content,"▣  Cüzler","30 cüzün başlangıç sayfası",
+             this::showJuz);
+        item(content,"⚑  Yer İmim",bookmark==0?"Henüz kaydedilmedi":"Sayfa "+bookmark,
+            ()->{if(bookmark>0)goPage(bookmark);else toast("Önce Mushaf’ta yer imi ekle.");});
+        space(content,8);
+        content.addView(label("GELECEK BÖLÜMLER",12,GOLD,true));
+        space(content,10);
+        categoryPair(content,"☾","Dua Kitaplığı","Doğrulanmış dualar",false,null,
+             "⌖","Kıble Bulucu","Pusula desteği",false,null);
+        categoryPair(content,"◷","Namaz Vakitleri","Konuma göre hesaplama",false,null,
+             "✦","Esmaül Hüsna","Kaynaklı isim listesi",false,null);
     }
+
+    private void tasbih(LinearLayout content) {
+        sectionTitle(content,"Tesbihat","İnternetsiz dijital zikir sayacı");
+        final String[] options={"Sübhânallah","Elhamdülillah","Allahu ekber"};
+        final int active=Math.max(0,Math.min(2,prefs.getInt("dhikr_mode",0)));
+        LinearLayout selectors=row();
+        for(int i=0;i<3;i++){
+            final int chosen=i;
+            TextView b=button(options[i],()->{
+                prefs.edit().putInt("dhikr_mode",chosen).apply();render();
+            },i==active);
+            b.setTextSize(11);
+            selectors.addView(b,new LinearLayout.LayoutParams(0,-2,1));
+        }
+        content.addView(selectors);
+        space(content,20);
+        LinearLayout panel=column();
+        panel.setPadding(dp(18),dp(24),dp(18),dp(24));
+        panel.setGravity(Gravity.CENTER);
+        panel.setBackground(shape(PANEL));
+        panel.addView(label(options[active],20,GOLD,true));
+        space(panel,18);
+        TextView number=label(""+prefs.getInt("dhikr_"+active,0),62,WHITE,true);
+        number.setGravity(Gravity.CENTER);
+        panel.addView(number);
+        space(panel,8);
+        panel.addView(label("Hedef: 33 • 99 • serbest",13,MUTE,false));
+        space(panel,22);
+        TextView add=button("＋  Zikir Ekle",()->{
+            int next=prefs.getInt("dhikr_"+active,0)+1;
+            prefs.edit().putInt("dhikr_"+active,next).apply();
+            number.setText(""+next);
+        },true);
+        panel.addView(add,new LinearLayout.LayoutParams(-1,-2));
+        space(panel,12);
+        panel.addView(button("Sayacı sıfırla",()->new AlertDialog.Builder(this)
+            .setTitle("Sayacı sıfırla")
+            .setMessage("Bu tesbih sayısı sıfırlansın mı?")
+            .setPositiveButton("Sıfırla",(d,w)->{
+                prefs.edit().putInt("dhikr_"+active,0).apply();
+                number.setText("0");
+            }).setNegativeButton("Vazgeç",null).show(),false));
+        content.addView(panel);
+        space(content,18);
+        content.addView(label("Sayılar bu cihazda saklanır.",13,MUTE,false));
+    }
+    private void worship(LinearLayout content) {
+        sectionTitle(content,"İbadet Takibi","Kişisel günlük işaretleme • Namaz vakti bildirimi değildir");
+        content.addView(label("Bugünün kaydı • "+java.time.LocalDate.now(),14,GOLD,true));
+        space(content,9);
+        item(content,"Tamamlanan",todayCount()+" / 5 namaz",()->{});
+        final String[] names={"Sabah","Öğle","İkindi","Akşam","Yatsı"};
+        for(int i=0;i<5;i++){
+            final int target=i;
+            boolean done=prefs.getBoolean(todayKey(i),false);
+            String symbol=done?"✓":"○";
+            item(content,symbol+"  "+names[i]+" Namazı",done?"İşaretlendi":"Henüz işaretlenmedi",
+                ()->{prefs.edit().putBoolean(todayKey(target),!done).apply();render();});
+        }
+        content.addView(label("Bu takip sadece sizin kaydınızdır. Namazın kılındığını doğrulamaz.",12,MUTE,false));
+    }
+    private JSONArray storedNotes(){
+        try{return new JSONArray(prefs.getString("saved_notes","[]"));}
+        catch(Exception error){return new JSONArray();}
+    }
+    private void editNote(int index) {
+        JSONArray saved=storedNotes();
+        String original="";
+        if(index>=0)original=saved.optJSONObject(index)!=null?
+             saved.optJSONObject(index).optString("text",""):"";
+        EditText editor=new EditText(this);
+        editor.setMinLines(4);editor.setMaxLines(8);
+        editor.setGravity(Gravity.TOP);
+        editor.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        editor.setHint("Düşüncelerini veya okumak istediğin bir ayeti not et...");
+        editor.setText(original);
+        LinearLayout wrapper=column();wrapper.setPadding(dp(20),dp(8),dp(20),0);
+        wrapper.addView(editor);
+        new AlertDialog.Builder(this).setTitle(index<0?"Yeni Not":"Notu Düzenle")
+            .setView(wrapper)
+            .setPositiveButton("Kaydet",(d,w)->{
+                String value=editor.getText().toString().trim();
+                if(value.isEmpty()){toast("Boş not kaydedilmez.");return;}
+                try {
+                    JSONObject object=new JSONObject();
+                    object.put("text",value);
+                    object.put("date",java.time.LocalDate.now().toString());
+                    if(index>=0)saved.put(index,object);
+                    else saved.put(object);
+                    prefs.edit().putString("saved_notes",saved.toString()).apply();
+                    tab(4);
+                }catch(Exception e){toast("Not kaydedilemedi.");}
+            }).setNegativeButton("İptal",null).show();
+    }
+    private void noteOptions(int index) {
+        new AlertDialog.Builder(this).setTitle("Not işlemleri")
+          .setItems(new String[]{"Düzenle","Sil"},(dialog,selected)->{
+              if(selected==0)editNote(index);
+              else new AlertDialog.Builder(this).setTitle("Notu sil")
+                  .setMessage("Bu not silinsin mi?")
+                  .setPositiveButton("Sil",(d,w)->{
+                      JSONArray old=storedNotes();
+                      JSONArray newer=new JSONArray();
+                      for(int i=0;i<old.length();i++)if(i!=index)newer.put(old.opt(i));
+                      prefs.edit().putString("saved_notes",newer.toString()).apply();
+                      tab(4);
+                  }).setNegativeButton("Vazgeç",null).show();
+          }).show();
+    }
+    private void notes(LinearLayout content) {
+        sectionTitle(content,"Manevi Notlarım","Yazdıkların bu cihazda saklanır");
+        content.addView(button("＋  Yeni Not Oluştur",()->editNote(-1),true));
+        space(content,18);
+        JSONArray saved=storedNotes();
+        if(saved.length()==0){
+            item(content,"Henüz not yok","Yeni Not Oluştur seçeneğiyle başlayabilirsin.",()->editNote(-1));
+            return;
+        }
+        for(int i=saved.length()-1;i>=0;i--){
+            final int selected=i;
+            JSONObject note=saved.optJSONObject(i);
+            if(note==null)continue;
+            String value=note.optString("text","");
+            String display=value.length()>160?value.substring(0,160)+"…":value;
+            item(content,"✎  "+display,note.optString("date","")+"   •   Düzenle / Sil",
+                 ()->noteOptions(selected));
+        }
+    }
+    private void myBook(LinearLayout content) {
+        sectionTitle(content,"Defterim","Okumaların ve kişisel kayıtların");
+        item(content,"📖  Son Okuduğum Sayfa","Sayfa "+page,()->tab(2));
+        item(content,"⚑  Yer İmim",bookmark>0?"Sayfa "+bookmark:"Henüz kaydedilmedi",
+             ()->{if(bookmark>0)goPage(bookmark);else tab(2);});
+        item(content,"✎  Manevi Notlarım",storedNotes().length()+" kayıt",
+             ()->tab(4));
+        item(content,"◉  Tesbihat","Kayıtlı zikir sayaçları",()->tab(3));
+        item(content,"☼  Bugünkü İbadet","Namaz takibi: "+todayCount()+" / 5",
+             ()->tab(5));
+    }
+    private void settings(LinearLayout content) {
+        sectionTitle(content,"Ayarlar ve Bilgiler","Dini Asistanım • Android");
+        item(content,"◎  Çevrimdışı Kullanım","Kur’an ve Türkçe meal bu cihazda saklanır.",()->{});
+        item(content,"✦  Mushaf Görünümü","Özgün Arapça Mushaf renkleri korunur.",()->{});
+        item(content,"ℹ  İçerik Kaynakları","Rowad Tercüme Merkezi • QuranEnc.com • v1.0.4",
+             ()->new AlertDialog.Builder(this).setTitle("İçerik Bilgisi")
+               .setMessage("Arapça Mushaf: Medine Mushafı, 604 sayfa.\n\n"+
+                   "Türkçe meal: Rowad Tercüme Merkezi, QuranEnc.com, v1.0.4.\n\n"+
+                   "Arapça tilavet: Ali el-Huzeyfi (Hafs) için kaynak planlandı, ancak sesler henüz APK'ya eklenmedi.")
+               .setPositiveButton("Kapat",null).show());
+        item(content,"▤  Notlarımı Aç","Kişisel notlarına ulaş",()->tab(4));
+        space(content,18);
+        content.addView(label("Henüz yapılmayan özellikler: sesli tilavet, video paylaşımı, "+
+            "Kıble ve namaz vakitleri.",12,MUTE,false));
+    }
+
     private void quran(LinearLayout content) {
         LinearLayout tabs=row();
         tabs.addView(button("ARAPÇA",()->mode(true),arabic),new LinearLayout.LayoutParams(0,-2,1));
