@@ -137,7 +137,7 @@ class MainActivity : Activity() {
 
     private fun render() {
         statusText = null
-        val root = column().apply { setBackgroundColor(background) }
+        val root = column().apply { setBackgroundColor(this@MainActivity.background) }
         when (screen) {
             Screen.HOME -> root.addView(home(), LinearLayout.LayoutParams(-1, 0, 1f))
             Screen.QURAN -> root.addView(reader(), LinearLayout.LayoutParams(-1, 0, 1f))
