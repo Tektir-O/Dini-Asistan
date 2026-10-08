@@ -28,10 +28,8 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private JSONObject index;
     private int page=1, bookmark=0, section=0;
-    private boolean arabic=true, female=false;
-    private String reader="Mişari Raşid el-Afasi";
-    private final String[] men={"Mişari Raşid el-Afasi","Abdurrahman es-Sudeys","Abdülbasit Abdüssamed","Mahmud Halil el-Husari","Muhammed Sıddık el-Minşavi"};
-    private final String[] women={"Maria Ulfah","Zaynab Talha"};
+    private boolean arabic=true;
+    private final String reader="Ali el-Huzeyfi (Hafs)";
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -137,12 +135,12 @@ public class MainActivity extends Activity {
             item(content,"Türkçe Mealler","5 mealin doğrulanmış metinleri ve dağıtım izinleri henüz eklenmedi.",()->{});
         }
         space(content,18);
-        content.addView(label("Arapça okuyucular • ses dosyaları henüz yok",14,MUTE,true));space(content,8);
-        LinearLayout filters=row();
-        filters.addView(button("ERKEK",()->{female=false;reader=men[0];render();},!female),new LinearLayout.LayoutParams(0,-2,1));
-        filters.addView(button("BAYAN",()->{female=true;reader=women[0];render();},female),new LinearLayout.LayoutParams(0,-2,1));
-        content.addView(filters);space(content,8);
-        content.addView(button(reader+" ▾",this::selectReader,false));
+        content.addView(label("Arapça okuyucu • tek okuyucu",14,MUTE,true));space(content,8);
+        content.addView(button(reader,()->toast("Resmî ses kaydı henüz kurulum paketine eklenmedi."),false));
+        space(content,8);
+        content.addView(label("Tilavet kaynağı: Kral Fahd Kur’an Basım Kompleksi. " +
+                "Yalnızca resmî kaydın 114 suresi doğrulanınca çevrimdışı ses etkinleştirilecek.",
+                12,MUTE,false));
     }
     private Bitmap pageBitmap(int number) {
         String path=String.format(Locale.ROOT,"mushaf/pages/%03d.png",number);
@@ -205,11 +203,6 @@ public class MainActivity extends Activity {
                 try{arabic=true;goPage(pages.getInt(w));}catch(Exception ex){toast("Cüz açılamadı.");}
             }).setNegativeButton("Kapat",null).show();
         }catch(Exception ex){toast("Cüz listesi okunamadı.");}
-    }
-    private void selectReader(){
-        String[] names=female?women:men;
-        new AlertDialog.Builder(this).setTitle("Okuyucu seç • Ses dosyaları henüz eklenmedi")
-            .setItems(names,(d,w)->{reader=names[w];render();}).setNegativeButton("Kapat",null).show();
     }
     private void toast(String message){Toast.makeText(this,message,Toast.LENGTH_SHORT).show();}
 }
