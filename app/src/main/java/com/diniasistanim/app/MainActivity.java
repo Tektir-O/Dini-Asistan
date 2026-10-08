@@ -383,12 +383,13 @@ public class MainActivity extends Activity {
              ()->new AlertDialog.Builder(this).setTitle("İçerik Bilgisi")
                .setMessage("Arapça Mushaf: Medine Mushafı, 604 sayfa.\n\n"+
                    "Türkçe meal: Rowad Tercüme Merkezi, QuranEnc.com, v1.0.4.\n\n"+
-                   "Arapça tilavet: Ali el-Huzeyfi (Hafs) için kaynak planlandı, ancak sesler henüz APK'ya eklenmedi.")
+                   (tilavet!=null && tilavet.allBundled() ? "Arapça tilavet: Ali el-Huzeyfi (Hafs). 114 surenin ses kaydı çevrimdışı kullanılabilir." : "Arapça tilavet: Ali el-Huzeyfi (Hafs). Ses arşivi henüz kurulum paketine eklenmedi."))
                .setPositiveButton("Kapat",null).show());
         item(content,"▤  Notlarımı Aç","Kişisel notlarına ulaş",()->tab(4));
         space(content,18);
-        content.addView(label("Henüz yapılmayan özellikler: sesli tilavet, video paylaşımı, "+
-            "Kıble ve namaz vakitleri.",12,MUTE,false));
+        content.addView(label("Henüz yapılmayan özellikler: "+
+            (tilavet!=null && tilavet.allBundled() ? "" : "çevrimdışı ses arşivi, ")+
+            "video paylaşımı, kıble ve namaz vakitleri.",12,MUTE,false));
     }
 
     private void quran(LinearLayout content) {
@@ -446,16 +447,16 @@ public class MainActivity extends Activity {
         content.addView(label("TİLAVET",12,GOLD,true));
         space(content,10);
         item(content,"♫  Arapça Okuyucu",
-            "Ali el-Huzeyfi (Hafs) • ses paketi hazırlanıyor",
+            tilavet!=null && tilavet.allBundled() ? "Ali el-Huzeyfi (Hafs) • 114 sure çevrimdışı hazır" : "Ali el-Huzeyfi (Hafs) • ses paketi bekleniyor",
             ()->new AlertDialog.Builder(this)
                 .setTitle("Arapça Tilavet")
                 .setMessage("Okuyucu: Ali el-Huzeyfi (Hafs).\n\n"
-                    +"Resmî ses dosyaları doğrulanıp kurulum paketine eklenince "
-                    +"çevrimdışı dinleme ve ayet paylaşımı açılacak.")
+                    +(tilavet!=null && tilavet.allBundled() ? "114 sure çevrimdışı dinlenebilir. Ayet bazlı takip henüz doğrulanmadı." : "Resmî ses dosyaları doğrulanıp kurulum paketine eklenince çevrimdışı dinleme açılacak."))
                 .setPositiveButton("Anladım",null).show());
 
         content.addView(label("Kur’an ve meal sayfaları çevrimdışıdır. "
-            +"Video paylaşımı ve sesli okuma henüz hazır değil.",12,MUTE,false));
+            +(tilavet!=null && tilavet.allBundled() ? "Arapça tilavet hazır. " : "Arapça ses arşivi henüz eksik. ")+
+            "Video paylaşımı henüz hazır değil.",12,MUTE,false));
     }
 
     private void mushafReader(LinearLayout content) {
