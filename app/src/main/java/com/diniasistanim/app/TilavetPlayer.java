@@ -32,7 +32,7 @@ public final class TilavetPlayer {
         try(InputStream in=activity.getAssets().open(name)){return in.read()!=-1;}
         catch(Exception e){return false;}
     }
-    private void notifyChanged(){activity.runOnUiThread(changed);}
+    public boolean allBundled(){\n        for(int i=1;i<=114;i++)if(!bundled(i))return false;\n        return true;\n    }\n    private void notifyChanged(){activity.runOnUiThread(changed);}
     public void toggle(int number){
         if(number<1||number>114)return;
         if(player!=null && surah==number && !loading){
