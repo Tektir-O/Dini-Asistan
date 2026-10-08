@@ -37,6 +37,15 @@ jobs:
           sha256sum "$APK"
           ls -lh "$APK"
 
+      - name: Enable KVM hardware acceleration on GitHub runner
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm || { echo "::error::Hosted runner has no /dev/kvm; do not start slow software-emulated x86 Android"; exit 1; }
+          ls -l /dev/kvm
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          echo "PASS: /dev/kvm accessible. Android emulator can use hardware acceleration."
+
       - name: Install and verify real Arabic ayah playback on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -47,7 +56,7 @@ jobs:
           disk-size: 6144M
           heap-size: 512M
           ram-size: 3072M
-          disable-animations: true
+          disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
             set -euo pipefail
