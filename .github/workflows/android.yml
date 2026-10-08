@@ -42,8 +42,6 @@ jobs:
           (cd app/src/main/assets/mushaf/pages && sha256sum -c ../page-sha256.txt > /dev/null)
       - name: Check Turkish meal is bundled
         run: test -s app/src/main/assets/meal-rowad.json
-      - name: Inspect official audio download links
-        run: python3 scripts/discover_huzayfi_source.py
       - name: Prepare offline Huzayfi audio if official source is configured
         env:
           HUZAYFI_AUDIO_ARCHIVE_URL: ${{ secrets.HUZAYFI_AUDIO_ARCHIVE_URL }}
@@ -59,6 +57,13 @@ jobs:
               exit 1
             fi
             python3 scripts/verify_huzayfi_audio.py
+          fi
+      - name: Verify any included offline Arabic recordings
+        run: |
+          if [ -d app/src/main/assets/audio-ar/huzayfi-hafs ]; then
+            python3 scripts/verify_huzayfi_audio.py
+          else
+            echo "::warning::114-surah Arabic offline package has not been supplied. Build is code-only."
           fi
       - name: Compile Android Java without making or publishing an APK
         run: gradle :app:compileDebugJavaWithJavac --stacktrace --no-daemon
