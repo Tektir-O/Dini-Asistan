@@ -81,6 +81,7 @@ public class MainActivity extends Activity {
     @Override public void onBackPressed() {
         if(section==0)super.onBackPressed();
         else if(section==1 || section==7)tab(0);
+        else if(section==8)tab(2);
         else tab(1);
     }
     private void render() {
@@ -112,6 +113,7 @@ public class MainActivity extends Activity {
         else if(section==5)worship(area);
         else if(section==6)settings(area);
         else if(section==7)myBook(area);
+        else if(section==8)mushafReader(area);
 
         LinearLayout nav=row();
         nav.setBackgroundColor(PANEL);
@@ -148,7 +150,7 @@ public class MainActivity extends Activity {
         space(card,8);
         card.addView(label("Kur’an oku, tesbihatını takip et ve notlarını sakla.",14,WHITE,false));
         space(card,20);
-        card.addView(button("📖  Kur’an okumaya devam et   ›",()->tab(2),true));
+        card.addView(button("📖  Kur’an okumaya devam et   ›",()->goPage(page),true));
         parent.addView(card);
     }
     private void categoryTile(LinearLayout parent,String icon,String name,
@@ -197,7 +199,7 @@ public class MainActivity extends Activity {
         item(content,"◷  İbadet Takibim",todayCount()+" / 5 namaz işaretlendi",
              ()->tab(5));
         item(content,"⌑  Kaldığım Sayfa","Mushaf • Sayfa "+page,
-             ()->tab(2));
+             ()->goPage(page));
         space(content,10);
         content.addView(label("Kategorileri keşfet",20,WHITE,true));
         space(content,11);
@@ -215,15 +217,9 @@ public class MainActivity extends Activity {
              "◉","Tesbihat","Çevrimdışı sayaç",true,()->tab(3));
         categoryPair(content,"☼","İbadet Takibi","Günlük namaz kaydı",true,()->tab(5),
              "✎","Manevi Notlar","Kişisel not defteri",true,()->tab(4));
-        space(content,18);
-        content.addView(label("KUR’AN ARAÇLARI",12,GOLD,true));
-        space(content,10);
-        item(content,"⌕  Sure ve Ayet Arama","114 sure arasından doğru sayfayı bul",
-             this::searchAyah);
-        item(content,"▣  Cüzler","30 cüzün başlangıç sayfası",
-             this::showJuz);
-        item(content,"⚑  Yer İmim",bookmark==0?"Henüz kaydedilmedi":"Sayfa "+bookmark,
-            ()->{if(bookmark>0)goPage(bookmark);else toast("Önce Mushaf’ta yer imi ekle.");});
+        space(content,14);
+        item(content,"📖  Kur’an bölümünü aç",
+             "Sureler, 30 cüz, Mushaf ve meal tek sayfada",()->tab(2));
         space(content,8);
         content.addView(label("GELECEK BÖLÜMLER",12,GOLD,true));
         space(content,10);
@@ -388,6 +384,75 @@ public class MainActivity extends Activity {
     }
 
     private void quran(LinearLayout content) {
+        GradientDrawable banner=new GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            new int[]{0xFF194C46,0xFF0D3937,0xFF0D292F});
+        banner.setCornerRadius(dp(22));
+        banner.setStroke(dp(1),0xFFA7894E);
+        LinearLayout heading=column();
+        heading.setPadding(dp(22),dp(24),dp(22),dp(24));
+        heading.setBackground(banner);
+        heading.addView(label("DİNİ ASİSTANIM  /  KUR’AN",12,GOLD,true));
+        space(heading,15);
+        heading.addView(label("Kur’an-ı Kerim",30,WHITE,true));
+        space(heading,10);
+        heading.addView(label("604 sayfalık Medine Mushafı",15,WHITE,false));
+        space(heading,3);
+        heading.addView(label("Arapça Mushaf • Türkçe meal • İnternetsiz",13,MUTE,false));
+        space(heading,15);
+        heading.addView(label("۞",30,GOLD,false));
+        content.addView(heading);
+
+        space(content,18);
+        TextView continueCard=button("📖  Kaldığın yerden devam et   •   Sayfa "+page+"    ›",
+            ()->goPage(page),true);
+        continueCard.setTextSize(15);
+        content.addView(continueCard);
+        space(content,17);
+        content.addView(label("OKUMAYA BAŞLA",12,GOLD,true));
+        space(content,10);
+
+        item(content,"📖  Mushafı 1. sayfadan aç",
+            "Özgün Arapça Mushaf sayfaları",
+            ()->{arabic=true;prefs.edit().putBoolean("arabic",true).apply();goPage(1);});
+        item(content,"⌕  Sayfa numarasına git",
+            "1 ile 604 arasında bir sayfa seç",this::searchPage);
+        item(content,"☷  Sureler",
+            "114 sure arasından birini aç",this::showSurahs);
+        item(content,"▦  Cüzler",
+            "30 cüzün başlangıç sayfaları",this::showJuz);
+
+        space(content,8);
+        content.addView(label("MEAL VE ARAÇLAR",12,GOLD,true));
+        space(content,10);
+        item(content,"📜  Türkçe Meal",
+            "Rowad Tercüme Merkezi • QuranEnc.com • v1.0.4",
+            ()->{arabic=false;prefs.edit().putBoolean("arabic",false).apply();goPage(page);});
+        item(content,"⌕  Sure / Ayet Ara",
+            "Sure ve ayet numarasıyla Mushaf’ta bul",this::searchAyah);
+        item(content,"⚑  Yer İmim",
+            bookmark>0?"Kayıtlı sayfa: "+bookmark:"Henüz yer imi eklenmedi",
+            ()->{if(bookmark>0)goPage(bookmark);else toast("Mushaf ekranından yer imi ekleyin.");});
+
+        space(content,8);
+        content.addView(label("TİLAVET",12,GOLD,true));
+        space(content,10);
+        item(content,"♫  Arapça Okuyucu",
+            "Ali el-Huzeyfi (Hafs) • ses paketi hazırlanıyor",
+            ()->new AlertDialog.Builder(this)
+                .setTitle("Arapça Tilavet")
+                .setMessage("Okuyucu: Ali el-Huzeyfi (Hafs).\n\n"
+                    +"Resmî ses dosyaları doğrulanıp kurulum paketine eklenince "
+                    +"çevrimdışı dinleme ve ayet paylaşımı açılacak.")
+                .setPositiveButton("Anladım",null).show());
+
+        content.addView(label("Kur’an ve meal sayfaları çevrimdışıdır. "
+            +"Video paylaşımı ve sesli okuma henüz hazır değil.",12,MUTE,false));
+    }
+
+    private void mushafReader(LinearLayout content) {
+        content.addView(button("‹  Kur’an Menüsüne Dön",()->tab(2),false));
+        space(content,12);
         LinearLayout tabs=row();
         tabs.addView(button("ARAPÇA",()->mode(true),arabic),new LinearLayout.LayoutParams(0,-2,1));
         tabs.addView(button("TÜRKÇE MEAL",()->mode(false),!arabic),new LinearLayout.LayoutParams(0,-2,1));
@@ -495,7 +560,7 @@ public class MainActivity extends Activity {
     private void mode(boolean value){arabic=value;prefs.edit().putBoolean("arabic",value).apply();render();}
     private void goPage(int target){
         if(target<1||target>604){toast("1 ile 604 arasında sayfa seçin.");return;}
-        page=target;prefs.edit().putInt("page",page).apply();tab(2);
+        page=target;prefs.edit().putInt("page",page).apply();tab(8);
     }
     private void searchPage(){
         EditText input=new EditText(this);input.setInputType(InputType.TYPE_CLASS_NUMBER);input.setText(""+page);
