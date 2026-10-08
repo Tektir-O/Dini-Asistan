@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/premium-apk-install-retry.yml"
+      - ".github/scripts/premium-apk-emulator-smoke.sh"
 
 permissions:
   actions: read
