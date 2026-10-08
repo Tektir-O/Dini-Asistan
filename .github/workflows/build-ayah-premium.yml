@@ -1,0 +1,126 @@
+name: Dini Asistan Premium - 604 Sayfa Ayet Ayet Tilavet APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build-ayah-premium.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  premium-ayah-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 17 ve Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Android SDK yukle
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Qur'an ses ve PDF isleme gereksinimleri
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --no-cache-dir Pillow PyMuPDF requests mutagen
+
+      - name: Sayfa hizalama testleri
+        run: python scripts/test_mushaf_alignment.py
+
+      - name: 6236 ayet MP3 kaydindan 604 dogru sure/sayfa sesini birlestir
+        run: |
+          python -u scripts/build_ayah_pages.py
+          python scripts/validate_ayah_page_assets.py
+          du -sh app/src/main/assets
+
+      - name: Derlenen APK'dan once uyumluluk icin paket adi ve surumu ayarla
+        run: |
+          sed -i 's/applicationId = "com.dini.asistan"/applicationId = "com.dini.asistan.offline"/' app/build.gradle.kts
+          sed -i 's/versionCode = 2/versionCode = 4/' app/build.gradle.kts
+          sed -i 's/versionName = "0.2.0"/versionName = "0.4.0-premium-ayah"/' app/build.gradle.kts
+
+      - name: Kotlin ayet sira testleri ve tek APK derlemesi
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+
+      - name: Dosya, baslangic ve APK imza/izinsiz ag denetimi
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          cp app/build/outputs/apk/debug/app-debug.apk output/DiniAsistan-Premium-AyetAyet-Debug.apk
+          apk=output/DiniAsistan-Premium-AyetAyet-Debug.apk
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" > output/permissions.txt
+          if grep -F 'android.permission.INTERNET' output/permissions.txt; then
+            echo "::error::No INTERNET permission allowed";exit 1
+          fi
+          unzip -tq "$apk" | tail -1
+          unzip -Z1 "$apk" > output/files.txt
+          test "$(grep -Ec '^assets/mushaf/[0-9]{3}\.webp$' output/files.txt)" -eq 604
+          test "$(grep -Ec '^assets/audio/pages/[0-9]{3}\.opus$' output/files.txt)" -eq 604
+          unzip -p "$apk" assets/quran/ayah-page-index.json > output/ayah-page-index.json
+          python scripts/validate_ayah_page_assets.py --index-only output/ayah-page-index.json
+          sha256sum "$apk" > output/sha256.txt
+          ls -lh "$apk"
+          echo "SUCCESS Premium APK, 604 image pages, 604 ayah-accurate page clips, 6236 ayah cues, offline, signed."
+
+      - name: Paketlenmis APK'yi indirilebilir sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: dini-asistan-premium-ayet-ayet-debug-apk
+          path: output/DiniAsistan-Premium-AyetAyet-Debug.apk
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
+
+  android-emulator-install:
+    needs: premium-ayah-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dini-asistan-premium-ayet-ayet-debug-apk
+          path: app-test
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disk-size: 4096M
+          heap-size: 512M
+          ram-size: 3072M
+          script: |
+            set -e
+            adb install -r app-test/DiniAsistan-Premium-AyetAyet-Debug.apk
+            adb shell am start -n com.dini.asistan.offline/com.dini.asistan.MainActivity
+            sleep 5
+            adb shell dumpsys activity activities | grep 'com.dini.asistan.offline'
+            adb shell input tap 415 1700
+            sleep 3
+            adb shell uiautomator dump /sdcard/window.xml
+            adb pull /sdcard/window.xml screen.xml
+            grep 'Mushaf İndir' screen.xml
+            grep 'Tilavet İndir' screen.xml
+            grep 'Meal İndir' screen.xml
+            grep 'Video Oluştur' screen.xml
+            echo 'PREMIUM APK INSTALL, LAUNCH, AND DISABLED ACTIONS CHECKED'
