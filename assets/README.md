@@ -22,5 +22,5 @@
 - `scripts/download_mirror.py`: doğrulamalı indirici.
 - `.github/workflows/prepare-offline-sources.yml`: otomatik kaynak hazırlama işlemi.
 - SHA-256 listesi: başarılı işin `SOURCE-MANIFEST.json` dosyası.
-- Dosyalar Git geçmişine commit edilmez; GitHub Actions ve başarılıysa Releases kaynak paketinde durur.
+- Dosyalar Git geçmişine commit edilmez; GitHub Actions Artifacts bölümünde saklanır. Releases'a aktarım GitHub'ın HTTP 403 yetki reddi nedeniyle şimdilik kapalıdır.
 - Bu dosyalar henüz uygulamaya gömülmedi. APK ayrıca hazırlanıp uçak modunda test edilecektir.
