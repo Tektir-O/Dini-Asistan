@@ -3,6 +3,20 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// All future install-over-the-top Debug APKs must use the SAME signing key.
+// The private keystore is provided only by environment variables at CI runtime,
+// never included in the public repository or in app assets.
+val stableKeyStoreFile = System.getenv("DINI_SIGNING_STORE_FILE")?.takeIf { it.isNotBlank() }
+val stableStorePassword = System.getenv("DINI_SIGNING_STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+val stableKeyAlias = System.getenv("DINI_SIGNING_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+val stableKeyPassword = System.getenv("DINI_SIGNING_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+val hasPersistentSigning = listOf(stableKeyStoreFile, stableStorePassword, stableKeyAlias, stableKeyPassword)
+    .all { !it.isNullOrBlank() }
+
+if (hasPersistentSigning) {
+    require(java.io.File(stableKeyStoreFile!!).isFile) { "Persistent signing keystore missing." }
+}
+
 android {
     namespace = "com.dini.asistan"
     compileSdk = 35
@@ -11,11 +25,27 @@ android {
         applicationId = "com.dini.asistan"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = (providers.gradleProperty("diniVersionCode").orNull ?: "4").toInt()
+        versionName = providers.gradleProperty("diniVersionName").orNull ?: "0.4.0-premium-ayah"
+    }
+
+    signingConfigs {
+        if (hasPersistentSigning) {
+            create("persistentDebug") {
+                storeFile = file(stableKeyStoreFile!!)
+                storePassword = stableStorePassword
+                keyAlias = stableKeyAlias
+                keyPassword = stableKeyPassword
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            if (hasPersistentSigning) {
+                signingConfig = signingConfigs.getByName("persistentDebug")
+            }
+        }
         release {
             isMinifyEnabled = false
         }
