@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   complete-verification:
-    name: 114 sure + mushaf: tam ses decode ve tum PDF sayfalari
+    name: "114 sure ve mushaf - tam ses decode ve tum PDF sayfalari"
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
