@@ -31,6 +31,8 @@ jobs:
         run: |
           npm install --no-audit --no-fund --no-package-lock
           npm run generate:index
+      - name: Offline Turkish Rowad meal
+        run: node scripts/prepare_meal.mjs
       - name: Mushaf
         run: bash scripts/prepare_mushaf.sh
       - name: Integrity verification
@@ -38,6 +40,8 @@ jobs:
           test "$(find app/src/main/assets/mushaf/pages -name '*.png' | wc -l)" -eq 604
           test "$(wc -l < app/src/main/assets/mushaf/page-sha256.txt)" -eq 604
           (cd app/src/main/assets/mushaf/pages && sha256sum -c ../page-sha256.txt > /dev/null)
+      - name: Check Turkish meal is bundled
+        run: test -s app/src/main/assets/meal-rowad.json
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace --no-daemon
       - name: Publish APK artifact
