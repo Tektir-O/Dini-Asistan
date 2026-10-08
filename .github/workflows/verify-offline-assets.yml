@@ -10,7 +10,7 @@ on:
 
 permissions:
   actions: read
-  contents: write
+  contents: read
 
 jobs:
   complete-verification:
@@ -39,17 +39,10 @@ jobs:
           test -f offline-sources/SOURCE-MANIFEST.json
       - name: Her sesin tamamini coz, ses sinyalini olc, 640 PDF sayfasini render et, SHA256 kontrol et
         run: python scripts/verify_offline_assets.py
-      - name: Dogrulama raporunu kaydet
+      - name: Dogrulama raporunu kaydet (Releases yetkisi gerektirmez)
         uses: actions/upload-artifact@v4
         with:
           name: final-deep-verification-report
           path: quran-verification-report.json
           retention-days: 90
           if-no-files-found: error
-      - name: Yayina uygunlugu onaylanmamis paketi taslak surumde sakla
-        run: |
-          tag="offline-hafs-maher-archive-v2"
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "TASLAK: Mushaf PDF + 114 tam sure kaynak paketi" --notes "Teknik kontroller tamam. Bu bir APK degildir. Ses aynasinin resmi lisansli kayitla ozdesligi ve 604 mushaf sayfasinin tek tek icerigi henüz bagimsiz onaylanmadi. Bu nedenle release taslaktir."
-          fi
-          gh release upload "$tag" input-package/offline-quran-hafs-maher-sources.zip quran-verification-report.json --clobber
