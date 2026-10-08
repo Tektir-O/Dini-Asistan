@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
     @Override public void onBackPressed() {
         if(section==0)super.onBackPressed();
         else if(section==1 || section==7)tab(0);
-        else if(section==8)tab(2);
+        else if(section==8)tab(1);
         else tab(1);
     }
     private void render() {
@@ -221,13 +221,13 @@ public class MainActivity extends Activity {
         sectionTitle(content,"Kategoriler","Dini Asistanım’ın bölümleri");
         content.addView(label("OKUMA VE İBADET",12,GOLD,true));
         space(content,10);
-        categoryPair(content,"📖","Kur’an-ı Kerim","604 sayfa • Türkçe meal",true,()->tab(2),
+        categoryPair(content,"📖","Kur’an-ı Kerim","604 sayfa • Türkçe meal",true,()->goPage(page),
              "◉","Tesbihat","Çevrimdışı sayaç",true,()->tab(3));
         categoryPair(content,"☼","İbadet Takibi","Günlük namaz kaydı",true,()->tab(5),
              "✎","Manevi Notlar","Kişisel not defteri",true,()->tab(4));
         space(content,14);
         item(content,"📖  Kur’an bölümünü aç",
-             "Sureler, 30 cüz, Mushaf ve meal tek sayfada",()->tab(2));
+             "Sureler, 30 cüz, Mushaf ve meal tek sayfada",()->goPage(page));
         space(content,8);
         content.addView(label("GELECEK BÖLÜMLER",12,GOLD,true));
         space(content,10);
@@ -551,7 +551,9 @@ public class MainActivity extends Activity {
                 .setSingleChoiceItems(labels,selectedTilavetSurah-1,(d,which)->{
                     selectedTilavetSurah=which+1;
                     prefs.edit().putInt("tilavet_surah",selectedTilavetSurah).apply();
-                    d.dismiss();render();
+                    d.dismiss();
+                    try{goPage(surahs.getJSONObject(which).getInt("page"));}
+                    catch(Exception ex){render();}
                 }).setNegativeButton("İptal",null).show();
         }catch(Exception e){toast("Sure listesi açılamadı.");}
     }
@@ -621,8 +623,26 @@ public class MainActivity extends Activity {
         } catch(Exception ex){return null;}
     }
     private void mode(boolean value){arabic=value;prefs.edit().putBoolean("arabic",value).apply();render();}
+    private int surahAtPage(int target){
+        if(index==null)return selectedTilavetSurah;
+        try{
+            JSONArray surahs=index.getJSONArray("surahs");
+            int number=1;
+            for(int i=0;i<surahs.length();i++){
+                int begin=surahs.getJSONObject(i).getInt("page");
+                if(begin>target)break;
+                number=i+1;
+            }
+            return number;
+        }catch(Exception ignored){return selectedTilavetSurah;}
+    }
     private void goPage(int target){
         if(target<1||target>604){toast("1 ile 604 arasında sayfa seçin.");return;}
+        int nextSurah=surahAtPage(target);
+        if(nextSurah!=selectedTilavetSurah){
+            selectedTilavetSurah=nextSurah;
+            prefs.edit().putInt("tilavet_surah",nextSurah).apply();
+        }
         page=target;prefs.edit().putInt("page",page).apply();tab(8);
     }
     private void searchPage(){
