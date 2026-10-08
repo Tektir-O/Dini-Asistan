@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,7 +16,7 @@ val hasPersistentSigning = listOf(stableKeyStoreFile, stableStorePassword, stabl
     .all { !it.isNullOrBlank() }
 
 if (hasPersistentSigning) {
-    require(java.io.File(stableKeyStoreFile!!).isFile) { "Persistent signing keystore missing." }
+    require(File(stableKeyStoreFile!!).isFile) { "Persistent signing keystore missing." }
 }
 
 android {
