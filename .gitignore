@@ -1,0 +1,6 @@
+# Büyük mushaf ve ses arşivleri Git history'sine eklenmez.
+offline-sources/
+android-app/app/src/main/assets/mushaf/
+android-app/app/src/main/assets/audio/
+*.part
+__pycache__/
