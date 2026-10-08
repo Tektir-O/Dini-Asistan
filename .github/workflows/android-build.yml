@@ -1,0 +1,50 @@
+name: Dini Asistan Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-build.yml"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "gradle.properties"
+      - "app/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: Android test + debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Android SDK paketlerini kur
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Kotlin birim testleri ve APK derle
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: APK iceriginde internet izni olmadigini kontrol et
+        run: |
+          aapt dump permissions app/build/outputs/apk/debug/app-debug.apk | tee permissions.txt
+          if grep -q "android.permission.INTERNET" permissions.txt; then
+            echo "::error::Offline uygulamaya INTERNET izni eklenmis."
+            exit 1
+          fi
+      - name: Derlenen APK'yi kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: dini-asistan-ilk-android-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
