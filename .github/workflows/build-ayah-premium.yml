@@ -57,7 +57,7 @@ jobs:
 
       - name: Derlenen APK'dan once uyumluluk icin paket adi ve surumu ayarla
         run: |
-          sed -i 's/applicationId = "com.dini.asistan"/applicationId = "com.dini.asistan.offline"/' app/build.gradle.kts
+          sed -i 's/applicationId = "com.dini.asistan"/applicationId = "com.dini.asistan.premium"/' app/build.gradle.kts
           sed -i 's/versionCode = 2/versionCode = 4/' app/build.gradle.kts
           sed -i 's/versionName = "0.2.0"/versionName = "0.4.0-premium-ayah"/' app/build.gradle.kts
 
@@ -117,9 +117,9 @@ jobs:
           script: |
             set -e
             adb install -r app-test/DiniAsistan-Premium-AyetAyet-Debug.apk
-            adb shell am start -n com.dini.asistan.offline/com.dini.asistan.MainActivity --ez dini_internal_playback_test true
+            adb shell am start -n com.dini.asistan.premium/com.dini.asistan.MainActivity --ez dini_internal_playback_test true
             sleep 8
-            adb shell dumpsys activity activities | grep 'com.dini.asistan.offline'
+            adb shell dumpsys activity activities | grep 'com.dini.asistan.premium'
             adb shell uiautomator dump /sdcard/window.xml
             adb pull /sdcard/window.xml screen.xml
             python - <<'PY'
