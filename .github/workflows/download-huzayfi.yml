@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+      - name: Install audio verification tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Download first and last sample surahs
         run: python3 scripts/download_huzayfi_mp3quran.py --sample
       - name: Upload sample MP3s
@@ -29,6 +31,8 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+      - name: Install audio verification tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Download and check all 114 surahs
         run: python3 scripts/download_huzayfi_mp3quran.py
       - name: Upload all 114 surahs
