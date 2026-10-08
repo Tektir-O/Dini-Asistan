@@ -1,0 +1,41 @@
+name: Download Ali el-Huzeyfi Hafs MP3 Sesleri
+on:
+  push:
+    paths:
+      - '.github/workflows/download-huzayfi.yml'
+      - 'scripts/download_huzayfi_mp3quran.py'
+  workflow_dispatch:
+
+jobs:
+  ornek:
+    name: Ilk 4 sureyi indir
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download first and last sample surahs
+        run: python3 scripts/download_huzayfi_mp3quran.py --sample
+      - name: Upload sample MP3s
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ali-el-Huzeyfi-Hafs-Ornek-4-Sure
+          path: dist/Ali-el-Huzeyfi-Hafs-ORNEK-4-Sure.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  hepsi:
+    name: 114 sureyi eksiksiz indir
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and check all 114 surahs
+        run: python3 scripts/download_huzayfi_mp3quran.py
+      - name: Upload all 114 surahs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ali-el-Huzeyfi-Hafs-Tam-114-Sure-MP3
+          path: dist/Ali-el-Huzeyfi-Hafs-114-Sure-MP3.zip
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
