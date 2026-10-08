@@ -82,7 +82,10 @@ class MainActivity : Activity() {
         )
         ayahPlayer = AyahPagePlayer(
             this, catalog,
-            state = { message -> runOnUiThread { premium?.setStatus(message) } },
+            state = { message -> runOnUiThread {
+                premium?.setStatus(message)
+                statusText?.text=message
+            } },
             progress = { position, duration, verse, playing ->
                 runOnUiThread { premium?.setProgress(position,duration,verse,playing) }
             },
@@ -166,7 +169,10 @@ class MainActivity : Activity() {
             audio.stop()
             ayahPlayer.stop()
         }
-        if (screen == Screen.SURAH && target != Screen.SURAH) surahAudio.stop()
+        if (screen == Screen.SURAH && target != Screen.SURAH) {
+            surahAudio.stop()
+            ayahPlayer.stop()
+        }
         screen = target
         render()
     }
@@ -291,6 +297,7 @@ class MainActivity : Activity() {
         val target = (currentSurah + delta).coerceIn(1, 114)
         if (target == currentSurah) return
         surahAudio.stop()
+        ayahPlayer.stop()
         currentSurah = target
         getPreferences(MODE_PRIVATE).edit().putInt("surah", target).apply()
         render()
@@ -312,7 +319,7 @@ class MainActivity : Activity() {
         gap(main, 15)
         main.addView(text("Sure $currentSurah / 114", 23f, darkGreen, true, true))
         gap(main, 12)
-        val state = if (catalog.hasSurahAudio(currentSurah))
+        val state = if (catalog.surahPlan(currentSurah).isNotEmpty())
             "Ses APK içinde • İnternet gerekmiyor"
         else "Bu surenin sesi henüz APK içinde değil"
         main.addView(text(state, 15f, muted, center = true))
@@ -329,13 +336,14 @@ class MainActivity : Activity() {
         val controls = row()
         controls.addView(button("▶ Başlat") {
             audio.stop()
-            surahAudio.play(currentSurah)
+            ayahPlayer.playSurah(currentSurah)
         }, LinearLayout.LayoutParams(0, dp(55), 1f))
         controls.addView(button("Ⅱ Duraklat", Color.rgb(117, 120, 99)) {
-            surahAudio.pauseOrResume()
+            ayahPlayer.togglePause()
         }, LinearLayout.LayoutParams(0, dp(55), 1f))
         controls.addView(button("■ Durdur", Color.rgb(145, 76, 64)) {
-            surahAudio.stop()
+            ayahPlayer.stop()
+            statusText?.text = "Durduruldu"
         }, LinearLayout.LayoutParams(0, dp(55), 1f))
         main.addView(controls, matchWrap())
         gap(main, 12)
@@ -343,7 +351,7 @@ class MainActivity : Activity() {
         statusText = status
         main.addView(status, matchWrap())
         gap(main, 30)
-        main.addView(text("Not: Sure dinleme bütün sureyi çalar. Mushafın yalnızca açık sayfasını okutan ayrı kontrol, doğrulanmış sayfa ses zamanları eklenince çalışacaktır.", 13f, muted))
+        main.addView(text("114 surenin tilaveti ayet ayet dosyalar kullanır; Arapça okuma ve sayfa çerçevesi birlikte çalışır.", 13f, muted))
         body.addView(main, matchWrap())
         return body
     }
@@ -475,7 +483,7 @@ class MainActivity : Activity() {
         gap(body, 16)
         body.addView(text("Mushaf: 604 matbu sayfa hedeflenir. Kaynak PDF’nin 640 sayfası ile basılı mushafın 604 sayfası henüz tek tek eşleştirilmedi.", 14f, muted))
         gap(body, 16)
-        body.addView(text("Tilavet: Mahir el-Muaykılî (Hafs). Elimizdeki 114 sure kaydı için sayfaya özel, doğrulanmış zaman bilgileri oluşturuluyor.", 14f, muted))
+        body.addView(text("Tilavet: Mahir el-Muaykılî (Hafs). Ayrı kaydedilmiş 6236 ayet 604 sayfa olarak eşleştirilir. Basılı sayfayı aşan ayetler bölünmez, başladığı sayfada tamamı okunur.", 14f, muted))
         gap(body, 16)
         body.addView(text("Üçüncü taraf ses arşivinin yayın izni ve orijinal kaynak eşleşmesi doğrulanmadan genel dağıtım yapılmayacak.", 14f, muted))
         scroll.addView(body)
