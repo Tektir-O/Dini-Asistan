@@ -27,6 +27,7 @@ public class MainActivity extends Activity {
     private static final int BG=0xFF0B1B20, PANEL=0xFF183238, GOLD=0xFFD9B878, WHITE=0xFFF6F1E8, MUTE=0xFFBAC6C7;
     private SharedPreferences prefs;
     private JSONObject index;
+    private JSONObject meal;
     private int page=1, bookmark=0, section=0;
     private boolean arabic=true;
     private final String reader="Ali el-Huzeyfi (Hafs)";
@@ -45,6 +46,12 @@ public class MainActivity extends Activity {
             while ((n=in.read(buffer))!=-1) out.write(buffer,0,n);
             index=new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
         } catch (Exception ignored) { index=null; }
+        try (InputStream in=getAssets().open("meal-rowad.json")) {
+            java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();
+            byte[] buffer=new byte[8192]; int n;
+            while ((n=in.read(buffer))!=-1) out.write(buffer,0,n);
+            meal=new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
+        } catch (Exception ignored) { meal=null; }
         render();
     }
     private int dp(int n) { return Math.round(n*getResources().getDisplayMetrics().density); }
@@ -132,7 +139,7 @@ public class MainActivity extends Activity {
             },false));space(content,8);
             content.addView(label("Yakınlaştırmak için iki parmağınızı kullanın.",12,MUTE,false));
         } else {
-            item(content,"Türkçe Mealler","5 mealin doğrulanmış metinleri ve dağıtım izinleri henüz eklenmedi.",()->{});
+            showTurkishMeal(content);
         }
         space(content,18);
         content.addView(label("Arapça okuyucu • tek okuyucu",14,MUTE,true));space(content,8);
@@ -141,6 +148,61 @@ public class MainActivity extends Activity {
         content.addView(label("Tilavet kaynağı: Kral Fahd Kur’an Basım Kompleksi. " +
                 "Yalnızca resmî kaydın 114 suresi doğrulanınca çevrimdışı ses etkinleştirilecek.",
                 12,MUTE,false));
+    }
+    private void showTurkishMeal(LinearLayout content) {
+        content.addView(label("Türkçe Meal • Sayfa "+page+" / 604",19,GOLD,true));
+        space(content,7);
+        content.addView(label("Rowad Tercüme Merkezi • QuranEnc.com • v1.0.4",12,MUTE,false));
+        space(content,12);
+        if(index==null || meal==null) {
+            content.addView(label("Doğrulanmış Türkçe meal bu APK içine yüklenmedi.",16,MUTE,false));
+            return;
+        }
+        try {
+            JSONArray pages=index.getJSONArray("ayah_pages");
+            JSONArray translations=meal.getJSONArray("surahs");
+            int visible=0;
+            for(int s=0;s<pages.length();s++){
+                JSONArray positions=pages.getJSONArray(s);
+                JSONArray verses=translations.getJSONArray(s);
+                for(int a=0;a<positions.length();a++){
+                    if(positions.getInt(a)!=page)continue;
+                    if(a>=verses.length())throw new IllegalStateException("Ayet eksik");
+                    JSONObject entry=verses.getJSONObject(a);
+                    LinearLayout card=column();
+                    card.setPadding(dp(14),dp(14),dp(14),dp(14));
+                    card.setBackground(shape(PANEL));
+                    card.addView(label("Sure "+(s+1)+" • Ayet "+(a+1),13,GOLD,true));
+                    space(card,7);
+                    TextView text=label("",17,WHITE,false);
+                    text.setText(android.text.Html.fromHtml(
+                        entry.getString("translation"),android.text.Html.FROM_HTML_MODE_LEGACY));
+                    card.addView(text);
+                    if(!entry.isNull("footnotes")){
+                        String note=entry.optString("footnotes","");
+                        if(!note.isEmpty()){
+                            space(card,6);
+                            TextView footnote=label("",12,MUTE,false);
+                            footnote.setText(android.text.Html.fromHtml(note,
+                                android.text.Html.FROM_HTML_MODE_LEGACY));
+                            card.addView(footnote);
+                        }
+                    }
+                    content.addView(card);
+                    space(content,10);
+                    visible++;
+                }
+            }
+            if(visible==0)content.addView(label("Bu sayfaya karşılık gelen meal bulunamadı.",15,MUTE,false));
+        } catch(Exception exception) {
+            content.addView(label("Meal eşleştirme hatası. İçerik doğrulanmalı.",15,MUTE,false));
+        }
+        LinearLayout navigation=row();
+        navigation.addView(button("‹ Önceki",()->goPage(page-1),false),
+            new LinearLayout.LayoutParams(0,-2,1));
+        navigation.addView(button("Sonraki ›",()->goPage(page+1),false),
+            new LinearLayout.LayoutParams(0,-2,1));
+        content.addView(navigation);
     }
     private Bitmap pageBitmap(int number) {
         String path=String.format(Locale.ROOT,"mushaf/pages/%03d.png",number);
