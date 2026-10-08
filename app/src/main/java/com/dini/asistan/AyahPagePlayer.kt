@@ -6,158 +6,208 @@ import android.os.Handler
 import android.os.Looper
 
 /**
- * Offline Maher Al-Muaiqly per-ayah player. Each page asset is assembled from
- * real independently recorded ayahs, never invented surah time cuts.
- * Stops exactly at the end of its page; does not automatically change pages.
+ * Purely offline page and surah recitation. Each page clip is assembled from
+ * exact verse-separated audio recordings and independently checked timings.
+ * Does not split ayahs that span two printed pages at made-up timestamps.
  */
 class AyahPagePlayer(
     private val context: Context,
     private val catalog: OfflineCatalog,
     private val state: (String) -> Unit,
-    private val progress: (Int, Int, String, Boolean) -> Unit,
+    private val progress: (Int,Int,String,Boolean) -> Unit,
     private val error: (String) -> Unit
 ) {
-    private val handler=Handler(Looper.getMainLooper())
-    private var media: MediaPlayer?=null
-    private var cues: List<AyahCue> = emptyList()
-    private var page = 0
-    private var generation = 0
-    private var prepared = false
-    private var playing = false
-    private var wantedSeek = 0
-    private var durationMs = 0
-    private var paused = false
+    private val main=Handler(Looper.getMainLooper())
+    private var media:MediaPlayer?=null
+    private var generation=0
+    private var currentPart=0
+    private var plan:List<OfflineCatalog.SurahPagePart> = emptyList()
+    private var cues:List<AyahCue> = emptyList()
+    private var paused=false
+    private var prepared=false
+    private var playing=false
+    private var chapterMode=false
+    private var targetChapter=0
+    private var positionMs=0
 
-    val isPlaying: Boolean get() = playing && !paused
-    val isReady: Boolean get() = media != null && prepared
-    val currentPage: Int get() = page
+    val currentPage: Int
+        get() = if(!chapterMode) plan.getOrNull(currentPart)?.page?:0 else 0
+    val isPlaying:Boolean get()=playing&&!paused
+    val isReady:Boolean get()=media!=null&&prepared
 
-    private val heartbeat=object:Runnable {
+    private val ticker=object:Runnable {
         override fun run() {
-            val current=media ?: return
-            val position=try { current.currentPosition } catch (_:IllegalStateException) { return }
-            update(position)
-            if (playing && !paused && position>=durationMs-120) {
-                finish()
+            val m=media?:return
+            val part=plan.getOrNull(currentPart)?:return
+            val pos=try{m.currentPosition}catch(_:IllegalStateException){return}
+            positionMs=pos
+            val cue=cues.getOrNull(AyahCuePlan.currentIndex(cues,pos))
+            progress(pos.coerceAtLeast(0),part.toMs, cue?.label?:"",isPlaying)
+            if(playing&&!paused&&pos>=part.toMs-110){
+                nextPart()
                 return
             }
-            handler.postDelayed(this, 180)
+            main.postDelayed(this,200)
         }
     }
 
-    private fun update(pos:Int) {
-        val index=AyahCuePlan.currentIndex(cues, pos)
-        val label=if(index>=0) cues[index].label else ""
-        progress(pos.coerceAtLeast(0),durationMs,label,isPlaying)
-    }
-
-    fun play(pageNumber:Int) {
-        if(pageNumber !in 1..604 || !catalog.hasAyahPage(pageNumber)) {
-            error("Bu sayfanın ayet ayet tilavet dosyası henüz eklenmedi.")
+    fun play(page:Int) {
+        if(page !in 1..604||!catalog.hasAyahPage(page)){
+            error("Bu sayfanın ayet ayet tilaveti henüz hazır değil.")
             return
         }
-        if(page==pageNumber && prepared) {
-            if(paused) togglePause() else if(!playing) {
-                try { media?.start();playing=true;paused=false;loop() }
-                catch (_:Exception) { stop();error("Tilavet başlatılamadı") }
-            }
+        if(!chapterMode && currentPage==page && isReady){
+            if(paused) togglePause()
             return
         }
         stop()
-        page=pageNumber
-        cues=catalog.ayahCues(pageNumber)
-        durationMs=cues.last().toMs
-        val id=++generation
+        chapterMode=false
+        plan=listOf(OfflineCatalog.SurahPagePart(page,0,catalog.ayahCues(page).last().toMs))
+        startPart()
+    }
+
+    fun playSurah(surah:Int):Boolean {
+        val parts=catalog.surahPlan(surah)
+        if(parts.isEmpty()){
+            error("Bu surenin ayet kayıtları eksik; oynatma başlatılamadı.")
+            return false
+        }
+        stop()
+        chapterMode=true
+        targetChapter=surah
+        plan=parts
+        startPart()
+        return true
+    }
+
+    private fun startPart() {
+        val part=plan.getOrNull(currentPart)?:run{finish();return}
+        releaseMedia()
+        cues=catalog.ayahCues(part.page)
+        generation++
+        val request=generation
         try {
-            val player=MediaPlayer()
-            media=player
-            context.assets.openFd(catalog.ayahAudioPath(pageNumber)).use { a ->
-                player.setDataSource(a.fileDescriptor,a.startOffset,a.length)
+            val next=MediaPlayer()
+            media=next
+            context.assets.openFd(catalog.ayahAudioPath(part.page)).use {
+                next.setDataSource(it.fileDescriptor,it.startOffset,it.length)
             }
-            player.setOnPreparedListener {
-                if(id!=generation) return@setOnPreparedListener
+            next.setOnPreparedListener { m ->
+                if(request!=generation)return@setOnPreparedListener
                 prepared=true
-                durationMs=kotlin.math.min(it.duration, cues.last().toMs).coerceAtLeast(1)
-                if(wantedSeek>0) {
-                    it.seekTo(wantedSeek.coerceIn(0,durationMs-1),MediaPlayer.SEEK_CLOSEST)
+                if(part.fromMs>0) {
+                    m.seekTo(part.fromMs,MediaPlayer.SEEK_CLOSEST)
+                } else {
+                    startPrepared(m,request)
                 }
-                it.start()
-                playing=true
-                paused=false
-                state("Ayet ayet tilavet başladı")
-                loop()
             }
-            player.setOnCompletionListener {
-                if(id==generation) finish()
+            next.setOnSeekCompleteListener { m ->
+                if(request==generation && prepared && !playing)startPrepared(m,request)
             }
-            player.setOnErrorListener { _,_,_ ->
-                if(id==generation) { stop();error("Sayfa tilaveti açılamadı.") }
+            next.setOnCompletionListener{
+                if(request==generation)nextPart()
+            }
+            next.setOnErrorListener{_,_,_->
+                if(request==generation){stop();error("Tilavet ses dosyası okunamadı.")}
                 true
             }
-            state("Sayfa tilaveti hazırlanıyor")
-            player.prepareAsync()
-        } catch (_:Exception) { stop();error("Ses dosyası yüklenemedi.") }
+            state(if(chapterMode) "$targetChapter. sure hazırlanıyor" else "Sayfa tilaveti hazırlanıyor")
+            next.prepareAsync()
+        }catch(_:Exception){stop();error("Ayet ses kaydı açılamadı.")}
     }
 
-    fun togglePause() {
-        val m=media ?: return
-        if(!prepared) return
+    private fun startPrepared(m:MediaPlayer,request:Int){
+        if(request!=generation)return
         try {
-            if(paused) {
-                m.start();paused=false;playing=true;state("Tilavet devam ediyor");loop()
-            } else {
-                m.pause();paused=true;playing=true;state("Duraklatıldı");loop()
-            }
-        } catch (_:Exception) { stop();error("Oynatıcı hatası") }
+            m.start()
+            playing=true
+            paused=false
+            state(if(chapterMode) "$targetChapter. sure ayet ayet okunuyor" else "Ayet ayet sayfa tilaveti")
+            tick()
+        }catch(_:Exception){stop();error("Tilavet başlatılamadı.")}
     }
 
-    fun seekTo(milliseconds: Int) {
-        val m=media ?: return
-        if(!prepared)return
-        val position=milliseconds.coerceIn(0,(durationMs-1).coerceAtLeast(0))
-        try {
-            m.seekTo(position,MediaPlayer.SEEK_CLOSEST)
-            update(position)
-        } catch (_:Exception) { error("Süre çubuğunda atlama başarısız") }
-    }
-
-    fun nextAyah() = jumpAyah(1)
-    fun previousAyah() = jumpAyah(-1)
-
-    private fun jumpAyah(dir:Int) {
-        if(!prepared || cues.isEmpty())return
-        val current=try{media?.currentPosition?:0}catch(_:Exception){0}
-        val idx=AyahCuePlan.currentIndex(cues,current)
-        val next=if(dir>0) (idx+1).coerceAtMost(cues.lastIndex)
-            else if(current > cues[idx].fromMs+2500) idx
-            else (idx-1).coerceAtLeast(0)
-        seekTo(cues[next].fromMs)
-    }
-
-    private fun loop() {
-        handler.removeCallbacks(heartbeat)
-        handler.post(heartbeat)
+    private fun nextPart() {
+        if(plan.isEmpty())return
+        main.removeCallbacks(ticker)
+        currentPart++
+        if(currentPart>=plan.size)finish()
+        else startPart()
     }
 
     private fun finish() {
+        val done=if(chapterMode) "$targetChapter. sure tamamlandı" else "Sayfanın tilaveti tamamlandı"
         stop()
-        state("Bu sayfanın tilaveti tamamlandı")
+        state(done)
     }
 
-    fun stop() {
-        generation++
-        handler.removeCallbacks(heartbeat)
-        media?.let { try{it.reset()}catch(_:Exception){};it.release() }
+    fun togglePause() {
+        val m=media?:return
+        if(!prepared)return
+        try{
+            if(paused){
+                m.start();paused=false;playing=true
+                state("Tilavet devam ediyor")
+            } else {
+                m.pause();paused=true
+                state("Duraklatıldı")
+            }
+            tick()
+        }catch(_:Exception){stop();error("Duraklatma hatası")}
+    }
+
+    fun seekTo(ms:Int) {
+        val m=media?:return
+        val part=plan.getOrNull(currentPart)?:return
+        if(!prepared)return
+        val bounded=ms.coerceIn(part.fromMs,(part.toMs-1).coerceAtLeast(part.fromMs))
+        try{
+            // Seeking an existing stream must not restart playback.
+            m.seekTo(bounded,MediaPlayer.SEEK_CLOSEST)
+            positionMs=bounded
+            val cue=cues.getOrNull(AyahCuePlan.currentIndex(cues,bounded))
+            progress(bounded,part.toMs,cue?.label?:"",isPlaying)
+        }catch(_:Exception){error("Süre ayarı başarısız")}
+    }
+
+    fun nextAyah()=skipVerse(1)
+    fun previousAyah()=skipVerse(-1)
+
+    private fun skipVerse(direction:Int) {
+        if(!prepared||cues.isEmpty())return
+        val pos=try{media?.currentPosition?:0}catch(_:Exception){0}
+        val part=plan.getOrNull(currentPart)?:return
+        val now=AyahCuePlan.currentIndex(cues,pos)
+        if(now<0)return
+        val idx=if(direction>0)(now+1).coerceAtMost(cues.lastIndex)
+            else if(pos>cues[now].fromMs+2500)now else (now-1).coerceAtLeast(0)
+        val within=cues.indexOfFirst{it.fromMs>=part.fromMs && it.toMs<=part.toMs && it==cues[idx]}
+        if(within>=0)seekTo(cues[idx].fromMs)
+        else if(direction>0 && currentPart+1<plan.size)nextPart()
+    }
+
+    private fun tick(){
+        main.removeCallbacks(ticker)
+        main.post(ticker)
+    }
+    private fun releaseMedia(){
+        main.removeCallbacks(ticker)
+        media?.let{try{it.reset()}catch(_:Exception){};it.release()}
         media=null
-        cues=emptyList()
-        page=0
-        wantedSeek=0
-        durationMs=0
         prepared=false
         playing=false
         paused=false
+    }
+    fun stop(){
+        generation++
+        releaseMedia()
+        plan=emptyList()
+        cues=emptyList()
+        currentPart=0
+        chapterMode=false
+        targetChapter=0
+        positionMs=0
         progress(0,0,"",false)
     }
-
     fun release()=stop()
 }
