@@ -48,7 +48,7 @@ jobs:
       - name: MP3 servisi birim ve HTTP testleri
         run: (cd mp3_service && python3 -m unittest -v test_app)
       - name: Kotlin birim testleri ve APK derle
-        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+        run: gradle --no-daemon -Pmp3TestStandalone=true :app:testDebugUnitTest :app:assembleDebug
       - name: MP3 icin internet izni ve HTTPS guvenligi kontrolu
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions app/build/outputs/apk/debug/app-debug.apk | tee permissions.txt
