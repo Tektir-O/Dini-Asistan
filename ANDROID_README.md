@@ -79,3 +79,11 @@ GitHub Releases'a yazma erişimi olmadığı için APK, **Actions → Artifacts*
 
 - Resmî mushaf: Kral Fehd Kur’an Basım Kompleksi. İzin verilen format, kaynak ve kullanım şartları belgelenmeli.
 - Ses aynası Haramain Recordings/Internet Archive üzerinden alınmış. Bunun resmî izinli sesle birebir aynı kayıtlardan oluştuğu henüz kesinleşmedi. **Dağıtım lisansı doğrulanmadan nihai APK yayımlanmamalı.**
+
+---
+
+## Yeni: Bağlantıdan MP3 (çevrimiçi)
+
+Ana Menü → Bağlantıdan MP3 ekranında YouTube video bağlantısı yapıştırılır, kendi MP3 dönüştürme sunucunuzun HTTPS adresi ve API anahtarı girilir. Dönüştürme başarılı olursa Android 10+ cihazlarda dosya İndirilenler/DiniAsistan içine kaydedilir. Android 8/9 cihazlarda uygulamanın müzik klasörüne kaydedilir.
+
+MP3 servisi için [mp3_service/README.md](mp3_service/README.md) talimatlarını izleyin. Sunucu, yt-dlp ve FFmpeg gerektirir; GitHub tek başına sunucu değildir. İzinli videolar dışında kullanılmamalıdır. Uygulamanın önceki internet-izni-yok açıklamaları eski, yalnızca çevrimdışı APK sürümlerine aittir; yeni sürümde MP3 bölümü için INTERNET izni vardır. Mushaf/tilavet verileri yereldir.

@@ -73,8 +73,8 @@ jobs:
           test -s "$apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" > output/permissions.txt
-          if grep -F 'android.permission.INTERNET' output/permissions.txt; then
-            echo "::error::No INTERNET permission allowed";exit 1
+          if ! grep -F 'android.permission.INTERNET' output/permissions.txt; then
+            echo "::error::MP3 screen requires INTERNET permission";exit 1
           fi
           unzip -tq "$apk" | tail -1
           unzip -Z1 "$apk" > output/files.txt

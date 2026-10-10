@@ -82,8 +82,8 @@ jobs:
           APK=app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$APK" > permissions.txt
-          if grep -F 'android.permission.INTERNET' permissions.txt; then
-            echo "::error::OFFLINE APP MUST NOT REQUEST INTERNET!"
+          if ! grep -F 'android.permission.INTERNET' permissions.txt; then
+            echo "::error::MP3 downloader requires INTERNET permission!"
             exit 1
           fi
           unzip -Z1 "$APK" > apk-file-list.txt
@@ -107,7 +107,7 @@ jobs:
           sha256sum "$APK" > apk.sha256
           echo "APK size:"
           ls -lh "$APK"
-          echo "TEST OK: 604 ordered and horizontally aligned Mushaf pages, 114 Opus surahs, NO INTERNET permission."
+          echo "TEST OK: 604 ordered and horizontally aligned Mushaf pages, 114 Opus surahs, MP3 uses Internet; Quran pages and recitations remain offline."
 
       - name: Tek APK ve dogrulama raporu
         uses: actions/upload-artifact@v4

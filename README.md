@@ -23,3 +23,13 @@ Kapsamlı ses/PDF test raporu: [114 sure ve mushaf teknik doğrulaması](https:/
 **Durum:** 8 Ekim 2026 tarihinde tam 604 görsel sayfası ve 114 surenin sesini tek bir internetsiz Android geliştirme APK'sında paketleyen derleme başarıyla tamamlandı. **Sayfaya özel ses zamanları ve resmî yayın izni eşleşmesi henüz tamamlanmadı.** APK: [GitHub Actions indirme](https://github.com/Tektir-O/Dini-Asistan/actions/runs/37789860388/artifacts/11556237925). Ayrıntılar: [ANDROID_README.md](ANDROID_README.md).
 
 Ayrıntılar: [assets/README.md](assets/README.md).
+
+---
+
+## Bağlantıdan MP3 (isteğe bağlı çevrimiçi özellik)
+
+Ana menüde **Bağlantıdan MP3** ekranı eklendi. Uygulama, indirme hakkı olan tekil YouTube video bağlantısını ayrı bir HTTPS sunucusuna gönderip MP3 dosyasını Android İndirilenler/DiniAsistan klasörüne kaydetmeyi hedefler (Android 9 ve öncesinde uygulamaya özel müzik klasörü). Çeviri sunucusu [mp3_service](mp3_service/README.md) içindedir ve Docker ile ayrıca kurulmalıdır. Sunucu kurulmadan bu özellik çalışmaz. Gerçek video indirebilme başarısı garanti edilmez.
+
+**Kur’an’ın çevrimdışı yapısı değişmedi:** Mushaf/tilavet dosyaları yine APK içinden okunur; ağ izni yalnızca isteğe bağlı bağlantıdan MP3 özelliği için eklendi.
+
+Otomatik HTTP ve Android birim testleri vardır, ancak fiziksel telefon + canlı YouTube dönüştürme testi ayrıca gereklidir.

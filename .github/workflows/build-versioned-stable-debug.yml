@@ -95,7 +95,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEST" | head -n 3
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEST" | grep "package: name='com.dini.asistan.premium' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$DEST" | tee output/permissions.txt
-          if grep -F 'android.permission.INTERNET' output/permissions.txt; then exit 1; fi
+          if ! grep -F 'android.permission.INTERNET' output/permissions.txt; then exit 1; fi
           unzip -tq "$DEST" | tail -1
           test "$(unzip -Z1 "$DEST" | grep -Ec '^assets/mushaf/[0-9]{3}\.webp$')" -eq 604
           test "$(unzip -Z1 "$DEST" | grep -Ec '^assets/audio/pages/[0-9]{3}\.opus$')" -eq 604

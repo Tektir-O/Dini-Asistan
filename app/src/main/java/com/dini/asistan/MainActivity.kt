@@ -277,6 +277,23 @@ class MainActivity : Activity() {
         gap(surahCard, 8)
         surahCard.addView(text("Sureleri dinle  ›", 14f, green, true))
         categories.addView(surahCard, matchWrap())
+        gap(categories, 12)
+        val mp3Card = column().apply {
+            background = rounded(Color.WHITE)
+            elevation = dp(2).toFloat()
+            sectionPadding(this, 19, 18)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                startActivity(android.content.Intent(this@MainActivity, Mp3ConverterActivity::class.java))
+            }
+        }
+        mp3Card.addView(text("♫  BAĞLANTIDAN MP3", 20f, darkGreen, true))
+        gap(mp3Card, 8)
+        mp3Card.addView(text("YouTube bağlantısını yapıştır, MP3'e dönüştür ve indir", 14f, muted))
+        gap(mp3Card, 8)
+        mp3Card.addView(text("MP3 dönüştürücüyü aç  ›", 14f, green, true))
+        categories.addView(mp3Card, matchWrap())
         gap(categories, 20)
         categories.addView(text("İçerik durumu", 19f, darkGreen, true))
         gap(categories, 8)
@@ -486,7 +503,7 @@ class MainActivity : Activity() {
         gap(body, 18)
         body.addView(text("Dini Asistan • İlk Android sürümü", 16f, ink, true))
         gap(body, 10)
-        body.addView(text("İnternet izni yok. Uygulama hiçbir sunucudan ses veya mushaf indirmez.", 15f, muted))
+        body.addView(text("Kur’an ve tilavet içerikleri çevrimdışıdır. Bağlantıdan MP3 özelliği ise ayrı bir HTTPS sunucusu ve internet gerektirir.", 15f, muted))
         gap(body, 16)
         body.addView(text("Mushaf: 604 matbu sayfa hedeflenir. Kaynak PDF’nin 640 sayfası ile basılı mushafın 604 sayfası henüz tek tek eşleştirilmedi.", 14f, muted))
         gap(body, 16)
