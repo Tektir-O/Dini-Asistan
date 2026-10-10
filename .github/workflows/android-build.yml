@@ -9,6 +9,15 @@ on:
       - "build.gradle.kts"
       - "gradle.properties"
       - "app/**"
+      - "mp3_service/**"
+  pull_request:
+    paths:
+      - ".github/workflows/android-build.yml"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "gradle.properties"
+      - "app/**"
+      - "mp3_service/**"
   workflow_dispatch:
 
 permissions:
@@ -36,15 +45,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.10.2"
+      - name: MP3 servisi birim ve HTTP testleri
+        run: (cd mp3_service && python3 -m unittest -v test_app)
       - name: Kotlin birim testleri ve APK derle
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
-      - name: APK iceriginde internet izni olmadigini kontrol et
+      - name: MP3 icin internet izni ve HTTPS guvenligi kontrolu
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions app/build/outputs/apk/debug/app-debug.apk | tee permissions.txt
-          if grep -q "android.permission.INTERNET" permissions.txt; then
-            echo "::error::Offline uygulamaya INTERNET izni eklenmis."
-            exit 1
-          fi
+          grep -q "android.permission.INTERNET" permissions.txt
+          grep -q 'android:usesCleartextTraffic="false"' app/src/main/AndroidManifest.xml
       - name: Derlenen APK'yi kaydet
         uses: actions/upload-artifact@v4
         with:
