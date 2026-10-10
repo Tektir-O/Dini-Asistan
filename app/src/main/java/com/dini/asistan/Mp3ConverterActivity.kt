@@ -89,7 +89,7 @@ class Mp3ConverterActivity : Activity() {
 
         add(body, label("MP3 sunucu adresi (HTTPS)"))
         endpointField = field("https://mp3.ornekalanadi.com").apply {
-            setText(prefs.getString("endpoint", "") ?: "")
+            setText(prefs.getString("endpoint", "https://youtube-mp3-converter-production-a4c6.up.railway.app") ?: "https://youtube-mp3-converter-production-a4c6.up.railway.app")
         }
         add(body, endpointField, 10)
         add(body, label("Sunucu API anahtarı"))
