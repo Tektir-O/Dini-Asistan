@@ -44,6 +44,11 @@ android {
 
     buildTypes {
         debug {
+            // Standalone QA APK only when requested by android-build.yml.
+            // Keep the normal app and premium builds' package names unchanged.
+            if (providers.gradleProperty("mp3TestStandalone").orNull == "true") {
+                applicationIdSuffix = ".mp3test"
+            }
             if (hasPersistentSigning) {
                 signingConfig = signingConfigs.getByName("persistentDebug")
             }
